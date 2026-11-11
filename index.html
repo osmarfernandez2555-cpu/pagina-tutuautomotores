@@ -36,6 +36,10 @@ button,input,select{font:inherit;color:inherit}
 .brand.noimg img{display:none} .brand.noimg .wm{display:block}
 .brand small{display:block;font-size:.72rem;font-weight:600;color:var(--ink-2);letter-spacing:.06em;text-transform:uppercase;border-left:1px solid var(--line-2);padding-left:10px}
 .spacer{flex:1}
+.seg{display:inline-flex;padding:4px;gap:2px;border-radius:999px;background:var(--panel);border:1px solid var(--line-2)}
+.seg button{min-height:36px;padding:0 14px;border:0;border-radius:999px;background:transparent;font-weight:600;font-size:.86rem;color:var(--ink-2);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--ink);color:#0d1117}
+@media (max-width:520px){.seg button{padding:0 10px;font-size:.8rem}}
 .btn{color:var(--ink);white-space:nowrap;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 16px;border-radius:999px;border:1px solid var(--line-2);background:var(--panel);font-weight:600;font-size:.92rem;cursor:pointer;text-decoration:none;transition:background .2s,border-color .2s,transform .2s var(--ease)}
 .btn:hover{background:var(--panel-2);border-color:#46566f}
 .btn:active{transform:translateY(1px)}
@@ -57,9 +61,12 @@ button,input,select{font:inherit;color:inherit}
 .search svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:18px;height:18px;color:var(--ink-3)}
 .search input{width:100%;height:44px;border-radius:12px;border:1px solid var(--line-2);background:var(--bg);padding:0 12px 0 38px;font-size:.95rem;caret-color:var(--blue-hi)}
 .search input::placeholder{color:#7d8798}
-.chips{display:flex;gap:6px;overflow-x:auto;padding:12px 16px 4px;scrollbar-width:none}
+.chips{display:flex;flex-wrap:wrap;gap:6px;padding:12px 16px 6px}
 .chips::-webkit-scrollbar{display:none}
-.chip{flex:none;min-height:36px;padding:0 12px;border-radius:999px;border:1px solid var(--line-2);background:transparent;font-size:.84rem;font-weight:600;color:var(--ink-2);cursor:pointer;white-space:nowrap}
+.chip{flex:none;display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 10px 0 12px;border-radius:999px;border:1px solid var(--line-2);background:transparent;font-size:.84rem;font-weight:600;color:var(--ink-2);cursor:pointer;white-space:nowrap}
+.chip .n{min-width:22px;height:20px;padding:0 6px;border-radius:999px;background:var(--panel-2);color:var(--ink);font-size:.72rem;font-weight:800;font-variant-numeric:tabular-nums;display:inline-grid;place-items:center}
+.chip[aria-pressed="true"] .n{background:#0d1117;color:#fff}
+.chip.all{border-style:dashed}
 .chip:hover{color:var(--ink);border-color:#4a5a73}
 .chip[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:#0d1117}
 .sortrow{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 16px 10px;border-bottom:1px solid var(--line);font-size:.82rem;color:var(--ink-3)}
@@ -167,6 +174,7 @@ button,input,select{font:inherit;color:inherit}
     <small>Galpón 3D</small>
   </a>
   <div class="spacer"></div>
+  <div class="seg" role="group" aria-label="Cómo ver los autos en el galpón"><button id="k-fotos" aria-pressed="true">Fotos reales</button><button id="k-3d" aria-pressed="false">Modelos 3D</button></div>
   <button class="btn" id="btn-cat" aria-expanded="true" aria-controls="catalog">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
     <span>Catálogo</span>
@@ -205,6 +213,7 @@ button,input,select{font:inherit;color:inherit}
 <div class="hint" id="hint">
   <span><kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> caminar</span>
   <span>Arrastrá para mirar</span>
+  <span>Rueda: zoom</span>
   <span>Tocá un auto para verlo</span>
 </div>
 <div class="joy" id="joy" aria-hidden="true"><i></i><span class="joy-label">Caminar</span></div>
@@ -325,7 +334,8 @@ const pmrem = new THREE.PMREMGenerator(renderer);
 scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
 scene.environmentIntensity = 0.9;
 
-const camera = new THREE.PerspectiveCamera(TOUCH ? 68 : 60, innerWidth / innerHeight, 0.01, 260);
+const BASE_FOV = TOUCH ? 68 : 60; let fovT = BASE_FOV;
+const camera = new THREE.PerspectiveCamera(BASE_FOV, innerWidth / innerHeight, 0.01, 260);
 camera.rotation.order = 'YXZ';
 
 scene.add(new THREE.HemisphereLight(0xd6e2ff, 0x2a2b2e, 0.55));
@@ -626,6 +636,74 @@ const ringMat = new THREE.MeshBasicMaterial({ color: 0x4C82EC, transparent: true
 const ring = new THREE.Mesh(new THREE.RingGeometry(.96, 1, 64).rotateX(-Math.PI / 2), ringMat); ring.position.y = .015; scene.add(ring);
 const ringIn = new THREE.Mesh(new THREE.CircleGeometry(.96, 64).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0x4C82EC, transparent: true, opacity: 0, depthWrite: false })); ringIn.position.y = .013; scene.add(ringIn);
 
+
+/* ---------------- autos reales: cada cochera muestra la foto del auto ---------------- */
+const PHOTO = u => 'https://wsrv.nl/?url=' + encodeURIComponent('tutuautomotores.com/wp-content/uploads/' + u) + '&w=768&h=576&fit=cover&a=attention&output=jpg&q=80';
+const BW = 3.05, BH = BW * .75, CAP = .62, PY = .36 + CAP; // foto 4:3 arriba, cartel con precio abajo
+const boardsGrp = new THREE.Group(); scene.add(boardsGrp);
+const boardPick = [];
+const standGeo = (() => {
+  const g = [];
+  const fr = new THREE.BoxGeometry(BW + .14, BH + CAP + .16, .09); fr.translate(0, .36 + (BH + CAP) / 2, -.06); g.push(fr);
+  for (const sx of [-1, 1]) { const leg = new THREE.BoxGeometry(.09, .4, .09); leg.translate(sx * BW * .32, .2, -.06); g.push(leg); }
+  const base = new THREE.BoxGeometry(BW * .82, .04, .7); base.translate(0, .02, -.06); g.push(base);
+  return mergeGeometries(g.map(x => x.toNonIndexed()));
+})();
+const standMat = new THREE.MeshStandardMaterial({ color: 0x14181e, metalness: .55, roughness: .4 });
+const photoGeo = new THREE.PlaneGeometry(BW, BH); photoGeo.translate(0, PY + BH / 2, 0);
+const capGeo = new THREE.PlaneGeometry(BW, CAP); capGeo.translate(0, .36 + CAP / 2, 0);
+const loadingTex = canvasTex(256, 192, (g, w, h) => { g.fillStyle = '#1a212c'; g.fillRect(0, 0, w, h); g.fillStyle = '#5d6b80'; g.font = '600 18px Archivo, sans-serif'; g.textAlign = 'center'; g.fillText('Cargando foto…', w / 2, h / 2 + 6); });
+function captionTex(c) {
+  return canvasTex(1024, 208, (g, w, h) => {
+    g.fillStyle = '#0d1117'; g.fillRect(0, 0, w, h); g.fillStyle = '#2A63D4'; g.fillRect(0, 0, 12, h);
+    g.fillStyle = '#ffffff'; g.textBaseline = 'alphabetic';
+    let fs = 84; g.font = `800 ${fs}px Archivo, sans-serif`; g.fillText(fmtPrice(c), 44, 98);
+    const pw = g.measureText(fmtPrice(c)).width;
+    if (c.isNew) { g.fillStyle = '#2A63D4'; g.fillRect(64 + pw, 40, 128, 62); g.fillStyle = '#fff'; g.font = '800 38px Archivo, sans-serif'; g.fillText('0 KM', 82 + pw, 85); }
+    fs = 40; g.font = `600 ${fs}px Archivo, sans-serif`;
+    let name = c.name; while (g.measureText(name).width > w - 80 && name.length > 8) name = name.slice(0, -2);
+    if (name !== c.name) name = name.trim() + '…';
+    g.fillStyle = '#b9c1ce'; g.fillText(name, 44, 168);
+  });
+}
+cars.forEach(c => {
+  const r = c.row; const grp = new THREE.Group();
+  c.bx = c.x; c.bz = r.front - r.dir * 1.25;
+  grp.position.set(c.bx, 0, c.bz); grp.rotation.y = r.dir > 0 ? 0 : Math.PI;
+  grp.add(new THREE.Mesh(standGeo, standMat));
+  const pm = new THREE.MeshBasicMaterial({ map: loadingTex, toneMapped: false });
+  const photo = new THREE.Mesh(photoGeo, pm); photo.userData.car = c; grp.add(photo);
+  const cap = new THREE.Mesh(capGeo, new THREE.MeshBasicMaterial({ map: captionTex(c), toneMapped: false })); cap.userData.car = c; grp.add(cap);
+  boardPick.push(photo, cap); c.board = { grp, pm, tex: null, state: 0 };
+  boardsGrp.add(grp);
+});
+// carga las fotos de los autos cercanos y libera las lejanas
+let loadingN = 0;
+const texLoader = new THREE.TextureLoader(); texLoader.setCrossOrigin('anonymous');
+function streamPhotos() {
+  if (viewKind !== 'fotos' || active !== scene) return;
+  const cp = camera.position;
+  const near = cars.map(c => [Math.hypot(c.bx - cp.x, c.bz - cp.z), c]).sort((a, b) => a[0] - b[0]);
+  for (const [d, c] of near) {
+    const b = c.board;
+    if (d < 34 && b.state === 0 && loadingN < 6 && c.imgs[0]) {
+      b.state = 1; loadingN++;
+      texLoader.load(PHOTO(c.imgs[0]), t => { loadingN--; t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; b.tex = t; b.pm.map = t; b.pm.needsUpdate = true; b.state = 2; },
+        undefined, () => { loadingN--; b.state = 3; });
+    } else if (d > 70 && b.state === 2) { b.pm.map = loadingTex; b.pm.needsUpdate = true; b.tex.dispose(); b.tex = null; b.state = 0; }
+  }
+}
+function tintBoards(match) { cars.forEach(c => { c.board.pm.color.setHex(match(c) ? 0xffffff : 0x3a3f47); }); }
+let viewKind = 'fotos';
+function setViewKind(k) {
+  viewKind = k; const fotos = k === 'fotos';
+  boardsGrp.visible = fotos;
+  for (const key in typeMeshes) for (const p in typeMeshes[key]) typeMeshes[key][p].visible = !fotos;
+  sh.visible = !fotos;
+  $('k-fotos').setAttribute('aria-pressed', fotos); $('k-3d').setAttribute('aria-pressed', !fotos);
+  hover = null;
+}
+
 function setInstanceVisible(c, vis) {
   const ms = typeMeshes[c.typeKey];
   for (const p in ms) { const im = ms[p]; dummy.position.set(c.x, 0, c.z); dummy.rotation.set(0, c.rotY, 0); dummy.scale.setScalar(vis ? 1 : 0.0001); dummy.updateMatrix(); im.setMatrixAt(c.k, dummy.matrix); im.instanceMatrix.needsUpdate = true; }
@@ -680,11 +758,12 @@ function buildStudioCar(c) {
 }
 
 /* ---------------- colisiones ---------------- */
-const boxes = cars.map(c => { const along = c.rotY !== 0; const hx = (along ? c.W : c.L) / 2 + .45, hz = (along ? c.L : c.W) / 2 + .45; return { x0: c.x - hx, x1: c.x + hx, z0: c.z - hz, z1: c.z + hz }; });
+const boxes3d = cars.map(c => { const along = c.rotY !== 0; const hx = (along ? c.W : c.L) / 2 + .45, hz = (along ? c.L : c.W) / 2 + .45; return { x0: c.x - hx, x1: c.x + hx, z0: c.z - hz, z1: c.z + hz }; });
+const boxesFoto = cars.map(c => ({ x0: c.bx - BW / 2 - .35, x1: c.bx + BW / 2 + .35, z0: c.bz - .75, z1: c.bz + .65 }));
 function collide(p) {
   p.x = Math.min(Math.max(p.x, X0 - 6), X1 - .8); p.z = Math.min(Math.max(p.z, -ZW + .8), ZW - .8);
   if (p.x < X0 + .4 && Math.abs(p.z) > doorW / 2 - .6) p.x = X0 + .4;
-  for (const b of boxes) if (p.x > b.x0 && p.x < b.x1 && p.z > b.z0 && p.z < b.z1) {
+  for (const b of (viewKind === 'fotos' ? boxesFoto : boxes3d)) if (p.x > b.x0 && p.x < b.x1 && p.z > b.z0 && p.z < b.z1) {
     const dx0 = p.x - b.x0, dx1 = b.x1 - p.x, dz0 = p.z - b.z0, dz1 = b.z1 - p.z; const m = Math.min(dx0, dx1, dz0, dz1);
     if (m === dx0) p.x = b.x0; else if (m === dx1) p.x = b.x1; else if (m === dz0) p.z = b.z0; else p.z = b.z1;
   }
@@ -804,6 +883,7 @@ function frameStudio(c, fromInside) {
   });
 }
 function selectCar(c) {
+  camera.fov = BASE_FOV; camera.updateProjectionMatrix();
   if (mode === 'walk') walkBack = { pos: walk.pos.clone(), yaw: walk.yaw, pitch: walk.pitch };
   if (cabin) { cabin.removeFromParent(); cabin = null; }
   sel = c; mode = 'detail'; tween = null; controls.enabled = false;
@@ -885,11 +965,12 @@ $('v-ext').onclick = () => { if (mode === 'interior') exitInterior(); };
 $('v-int').onclick = () => { if (mode !== 'interior') enterInterior(); };
 $('v-spin').onclick = () => { const on = $('v-spin').getAttribute('aria-pressed') !== 'true'; $('v-spin').setAttribute('aria-pressed', on); };
 if (REDUCE) $('v-spin').setAttribute('aria-pressed', 'false');
+$('k-fotos').onclick = () => setViewKind('fotos'); $('k-3d').onclick = () => setViewKind('3d');
 
 /* ---------------- catálogo ---------------- */
 let filter = 'todos', q = '', sortBy = 'zona';
-const CHIPS = [['todos', 'Todos'], ['0km', '0 km'], ...ZONES.map(z => [z.id, z.label])];
-$('chips').innerHTML = CHIPS.map(([id, l]) => `<button class="chip" data-f="${id}" aria-pressed="${id === 'todos'}">${l}</button>`).join('');
+const CHIPS = [...ZONES.map(z => [z.id, z.label, cars.filter(c => c.zone === z).length]), ['0km', '0 km', cars.filter(c => c.isNew).length], ['todos', 'Ver todos', cars.length]];
+$('chips').innerHTML = CHIPS.map(([id, l, n]) => `<button class="chip${id === 'todos' ? ' all' : ''}" data-f="${id}" aria-pressed="${id === 'todos'}">${l}<span class="n">${n}</span></button>`).join('');
 $('cat-count').textContent = `${cars.length} vehículos en stock · tocá uno y vas directo`;
 const norm = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 const matches = c => (filter === 'todos' || (filter === '0km' ? c.isNew : c.zone.id === filter)) && (!q || norm(c.name + ' ' + c.brand).includes(q));
@@ -901,10 +982,10 @@ function renderList() {
   if (sortBy === 'precio-desc') list.sort((a, b) => np(a) - np(b) || pv(b) - pv(a) || b.price - a.price);
   if (sortBy === 'anio') list.sort((a, b) => (+b.year || 0) - (+a.year || 0));
   if (sortBy === 'km') list.sort((a, b) => a.km - b.km);
-  $('shown').textContent = list.length === cars.length ? 'Todos' : `${list.length} de ${cars.length}`;
+  $('shown').textContent = list.length === cars.length ? `${cars.length} vehículos` : `${list.length} de ${cars.length}`;
   $('list').innerHTML = list.length ? list.map(c => `<button class="item" data-i="${c.i}"><img loading="lazy" referrerpolicy="no-referrer" src="${img(c.imgs[0], true)}" onerror="this.onerror=null;this.src='${img(c.imgs[0])}'" alt=""><span><b>${c.name}</b><span>${[c.year, c.km ? fmtN(c.km) + ' km' : '0 km', c.trans].filter(Boolean).join(' · ')}${c.isNew ? '<i class="badge0">0 KM</i>' : ''}</span><em>${fmtPrice(c)}</em></span></button>`).join('')
     : `<p class="empty">No hay autos con “${$('q').value}”. Probá con otra marca o modelo.</p>`;
-  tintCars(matches);
+  tintCars(matches); tintBoards(matches);
   markList(sel);
 }
 function markList(c) { document.querySelectorAll('.item').forEach(b => b.classList.toggle('on', !!c && +b.dataset.i === c.i)); }
@@ -920,6 +1001,7 @@ $('sort').addEventListener('change', e => { sortBy = e.target.value; renderList(
 function closeCatalog(force) { $('catalog').classList.add('closed'); $('btn-cat').setAttribute('aria-expanded', 'false'); }
 $('btn-cat').onclick = () => { const c = $('catalog'); const open = c.classList.contains('closed'); c.classList.toggle('closed', !open); $('btn-cat').setAttribute('aria-expanded', open); if (open && sel) backToWalk(); };
 if (innerWidth <= 860) closeCatalog();
+setViewKind('fotos');
 renderList();
 
 /* ---------------- etiquetas flotantes ---------------- */
@@ -927,6 +1009,7 @@ const TAGN = 9; const tagEls = [];
 for (let k = 0; k < TAGN; k++) { const b = document.createElement('button'); b.className = 'tag'; b.hidden = true; b.tabIndex = -1; b.innerHTML = '<b></b><span></span>'; $('tags').appendChild(b); tagEls.push(b); b.addEventListener('click', () => { if (b._car) selectCar(b._car); }); }
 const vtmp = new THREE.Vector3(), fwd = new THREE.Vector3();
 function updateTags() {
+  if (viewKind === 'fotos') { tagEls.forEach(t => t.hidden = true); return; }
   if (mode !== 'walk') { tagEls.forEach(t => t.hidden = true); return; }
   camera.getWorldDirection(fwd);
   const cand = [];
@@ -958,17 +1041,24 @@ addEventListener('keyup', e => keys.delete(e.code));
 addEventListener('blur', () => keys.clear());
 
 const ray = new THREE.Raycaster(); const ndc = new THREE.Vector2();
+canvas.addEventListener('wheel', e => { if (mode !== 'walk') return; e.preventDefault(); fovT = Math.min(BASE_FOV + 8, Math.max(18, fovT + e.deltaY * (e.deltaMode ? .9 : .035))); $('hint').classList.add('gone'); }, { passive: false });
+const touches = new Map(); let pinch0 = 0, pinchFov = 0;
+canvas.addEventListener('pointerdown', e => { if (e.pointerType !== 'touch') return; touches.set(e.pointerId, [e.clientX, e.clientY]); if (touches.size === 2) { const [a, b] = [...touches.values()]; pinch0 = Math.hypot(a[0] - b[0], a[1] - b[1]); pinchFov = fovT; } });
+canvas.addEventListener('pointermove', e => { if (!touches.has(e.pointerId)) return; touches.set(e.pointerId, [e.clientX, e.clientY]); if (touches.size === 2 && mode === 'walk' && pinch0) { const [a, b] = [...touches.values()]; const d = Math.hypot(a[0] - b[0], a[1] - b[1]); fovT = Math.min(BASE_FOV + 8, Math.max(18, pinchFov * pinch0 / d)); } });
+const dropTouch = e => { touches.delete(e.pointerId); if (touches.size < 2) pinch0 = 0; };
+canvas.addEventListener('pointerup', dropTouch); canvas.addEventListener('pointercancel', dropTouch);
 function pick(cx, cy) {
   ndc.set(cx / innerWidth * 2 - 1, -(cy / innerHeight) * 2 + 1); ray.setFromCamera(ndc, camera);
+  if (viewKind === 'fotos') { const hit = ray.intersectObjects(boardPick, false)[0]; return hit && hit.distance < 45 ? hit.object.userData.car : null; }
   const hit = ray.intersectObjects(pickables, false)[0]; if (!hit || hit.distance > 40) return null;
-  const c = hit.object.userData.cars[hit.instanceId]; return c && matches(c) ? c : (c || null);
+  return hit.object.userData.cars[hit.instanceId] || null;
 }
 let drag = null; let hoverReq = null, hoverNext = 0;
 canvas.addEventListener('pointerdown', e => { drag = { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, moved: 0, id: e.pointerId }; if (mode === 'walk') { canvas.setPointerCapture(e.pointerId); canvas.classList.add('grabbing'); } });
 canvas.addEventListener('pointermove', e => {
   if (drag && drag.id === e.pointerId) {
     const dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag.x = e.clientX; drag.y = e.clientY; drag.moved += Math.abs(dx) + Math.abs(dy);
-    if (mode === 'walk') { const k = e.pointerType === 'touch' ? .0055 : .0034; walk.yaw -= dx * k; walk.pitch = Math.max(-1.1, Math.min(.9, walk.pitch - dy * k)); }
+    if (mode === 'walk' && touches.size < 2) { const k = (e.pointerType === 'touch' ? .0055 : .0034) * camera.fov / BASE_FOV; walk.yaw -= dx * k; walk.pitch = Math.max(-1.1, Math.min(.9, walk.pitch - dy * k)); }
   } else if (e.pointerType === 'mouse' && mode === 'walk') {
     hoverReq = { x: e.clientX, y: e.clientY };
   }
@@ -1012,14 +1102,16 @@ function frame() {
     walk.pos.addScaledVector(walk.vel, dt); collide(walk.pos);
     const bob = REDUCE ? 0 : Math.sin(tt * 9) * .025 * Math.min(1, walk.vel.length() / 4);
     camera.position.set(walk.pos.x, 1.65 + bob, walk.pos.z); camera.rotation.set(walk.pitch, walk.yaw, 0);
+    if (Math.abs(camera.fov - fovT) > .01) { camera.fov += (fovT - camera.fov) * (1 - Math.exp(-dt * 12)); camera.updateProjectionMatrix(); }
   } else if (controls.enabled) controls.update();
   if (active === studio && mode === 'detail' && !REDUCE && $('v-spin').getAttribute('aria-pressed') === 'true' && !(drag && drag.moved > 4)) turntable.rotation.y += dt * .22;
   if (active === studio) { led.material.emissiveIntensity = 2.1 + Math.sin(tt * 1.6) * .35; }
 
   if (hoverReq && tt > hoverNext && !tween) { hover = pick(hoverReq.x, hoverReq.y); canvas.classList.toggle('pointing', !!hover); hoverReq = null; hoverNext = tt + .08; }
   // aro y foco
+  if (tt > (window.__nextStream || 0)) { streamPhotos(); window.__nextStream = tt + .4; }
   const target = mode === 'walk' ? hover : null;
-  if (target) { ring.position.x = ringIn.position.x = target.x; ring.position.z = ringIn.position.z = target.z; const s = Math.max(target.L, target.W) * .62; ring.scale.setScalar(s); ringIn.scale.setScalar(s); ringMat.opacity += ((sel ? .9 : .55) - ringMat.opacity) * .15; ringIn.material.opacity += ((sel ? .1 : .05) - ringIn.material.opacity) * .15; }
+  if (target) { const fotos = viewKind === 'fotos'; ring.position.x = ringIn.position.x = fotos ? target.bx : target.x; ring.position.z = ringIn.position.z = fotos ? target.bz : target.z; const s = fotos ? BW * .6 : Math.max(target.L, target.W) * .62; ring.scale.setScalar(s); ringIn.scale.setScalar(s); ringMat.opacity += ((sel ? .9 : .55) - ringMat.opacity) * .15; ringIn.material.opacity += ((sel ? .1 : .05) - ringIn.material.opacity) * .15; }
   else { ringMat.opacity *= .85; ringIn.material.opacity *= .85; }
   
   renderer.render(active, camera);
