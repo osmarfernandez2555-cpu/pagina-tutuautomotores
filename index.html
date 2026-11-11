@@ -1,0 +1,963 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Galpón Tutu</title>
+<meta name="description" content="Recorré el galpón de Tutu Automotores en 3D: caminá entre los autos, mirá cada uno en 360° y sentate adentro.">
+<meta name="theme-color" content="#0d1117">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#F2F4F7; --ink-2:#B9C1CE; --ink-3:#8C96A6;
+  --bg:#0D1117; --panel:#121821; --panel-2:#18202B; --line:#263142; --line-2:#344257;
+  --blue:#2A63D4; --blue-hi:#4C82EC; --blue-ink:#FFFFFF; --wa:#1FA855;
+  --font:"Archivo",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --r:14px; --ease:cubic-bezier(.16,1,.3,1);
+  --safe-b:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:16px;line-height:1.45;-webkit-font-smoothing:antialiased;overflow:hidden;overscroll-behavior:none}
+::selection{background:var(--blue);color:#fff}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--blue-hi);outline-offset:2px;border-radius:8px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+#c{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+#c.grabbing{cursor:grabbing} #c.pointing{cursor:pointer}
+
+/* barra superior */
+.top{position:fixed;top:0;left:0;right:0;z-index:20;display:flex;align-items:center;gap:12px;padding:14px max(16px,env(safe-area-inset-left)) 14px max(16px,env(safe-area-inset-left));pointer-events:none;background:linear-gradient(#0d1117cc,#0d111700)}
+.top>*{pointer-events:auto}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--ink)}
+.brand img{height:30px;width:auto;display:block}
+.brand .wm{font-weight:800;font-stretch:118%;letter-spacing:.01em;font-size:1.05rem;display:none}
+.brand.noimg img{display:none} .brand.noimg .wm{display:block}
+.brand small{display:block;font-size:.72rem;font-weight:600;color:var(--ink-2);letter-spacing:.06em;text-transform:uppercase;border-left:1px solid var(--line-2);padding-left:10px}
+.spacer{flex:1}
+.btn{color:var(--ink);white-space:nowrap;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 16px;border-radius:999px;border:1px solid var(--line-2);background:var(--panel);font-weight:600;font-size:.92rem;cursor:pointer;text-decoration:none;transition:background .2s,border-color .2s,transform .2s var(--ease)}
+.btn:hover{background:var(--panel-2);border-color:#46566f}
+.btn:active{transform:translateY(1px)}
+.btn svg{width:18px;height:18px;flex:none}
+.btn-primary{background:var(--blue);border-color:var(--blue);color:var(--blue-ink)}
+.btn-primary:hover{background:var(--blue-hi);border-color:var(--blue-hi)}
+.btn-wa{background:var(--wa);border-color:var(--wa);color:#fff}
+.btn-wa:hover{background:#26bd61;border-color:#26bd61}
+.btn[aria-pressed="true"]{background:#1d2a3e;border-color:var(--blue-hi);color:#fff}
+.icon-btn{width:44px;padding:0}
+
+/* catálogo */
+.catalog{position:fixed;z-index:15;top:72px;left:16px;bottom:16px;width:340px;display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:18px;box-shadow:0 18px 50px -12px #000a;transition:transform .45s var(--ease),opacity .3s;overflow:hidden}
+.catalog.closed{transform:translateX(calc(-100% - 24px));opacity:0;pointer-events:none}
+.cat-head{padding:16px 16px 10px}
+.cat-head h2{margin:0;font-size:1.25rem;font-weight:800;font-stretch:112%;letter-spacing:-.01em}
+.cat-head p{margin:2px 0 12px;color:var(--ink-3);font-size:.85rem}
+.search{position:relative}
+.search svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:18px;height:18px;color:var(--ink-3)}
+.search input{width:100%;height:44px;border-radius:12px;border:1px solid var(--line-2);background:var(--bg);padding:0 12px 0 38px;font-size:.95rem;caret-color:var(--blue-hi)}
+.search input::placeholder{color:#7d8798}
+.chips{display:flex;gap:6px;overflow-x:auto;padding:12px 16px 4px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;min-height:36px;padding:0 12px;border-radius:999px;border:1px solid var(--line-2);background:transparent;font-size:.84rem;font-weight:600;color:var(--ink-2);cursor:pointer;white-space:nowrap}
+.chip:hover{color:var(--ink);border-color:#4a5a73}
+.chip[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:#0d1117}
+.sortrow{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 16px 10px;border-bottom:1px solid var(--line);font-size:.82rem;color:var(--ink-3)}
+.sortrow select{background:var(--bg);border:1px solid var(--line-2);border-radius:10px;height:36px;padding:0 8px;color:var(--ink);font-size:.84rem}
+.list{flex:1;overflow-y:auto;padding:6px;scrollbar-width:thin;scrollbar-color:var(--line-2) transparent}
+.item{display:grid;grid-template-columns:72px 1fr;gap:12px;align-items:center;width:100%;text-align:left;padding:8px;border:0;border-radius:12px;background:transparent;cursor:pointer}
+.item:hover,.item.on{background:var(--panel-2)}
+.item img{width:72px;height:54px;object-fit:cover;border-radius:8px;background:#1b2330;display:block}
+.item b{display:block;font-size:.84rem;font-weight:700;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.item span{display:block;font-size:.78rem;color:var(--ink-3);margin-top:2px}
+.item em{font-style:normal;font-weight:700;font-variant-numeric:tabular-nums;font-size:.86rem;color:var(--ink);margin-top:3px;display:block}
+.badge0{display:inline-block;font-size:.66rem;font-weight:800;letter-spacing:.04em;padding:2px 6px;border-radius:6px;background:var(--blue);color:#fff;margin-left:6px;vertical-align:1px}
+.empty{padding:28px 16px;color:var(--ink-2);font-size:.9rem;text-align:center}
+
+/* etiquetas sobre los autos */
+#tags{position:fixed;inset:0;pointer-events:none;z-index:5}
+.tag{position:absolute;left:0;top:0;transform:translate(-50%,-100%);pointer-events:auto;display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:7px 11px 8px;border-radius:12px;border:1px solid #ffffff1f;background:#0d1117e6;box-shadow:0 8px 22px -8px #000c;cursor:pointer;white-space:nowrap;transition:opacity .25s;max-width:240px}
+.tag::after{content:"";position:absolute;left:50%;bottom:-6px;width:10px;height:10px;background:inherit;border-right:1px solid #ffffff1f;border-bottom:1px solid #ffffff1f;transform:translateX(-50%) rotate(45deg)}
+.tag b{font-size:.92rem;font-weight:800;font-variant-numeric:tabular-nums}
+.tag span{font-size:.72rem;color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;max-width:220px}
+.tag.hot{border-color:var(--blue-hi)}
+.tag[hidden]{display:none}
+
+/* ayuda y joystick */
+.hint{position:fixed;left:50%;bottom:calc(18px + var(--safe-b));transform:translateX(-50%);z-index:12;display:flex;gap:16px;align-items:center;padding:10px 16px;border-radius:999px;background:#0d1117d9;border:1px solid var(--line);font-size:.82rem;color:var(--ink-2);white-space:nowrap;transition:opacity .4s}
+.hint kbd{font:700 .74rem var(--font);padding:2px 6px;border-radius:6px;border:1px solid var(--line-2);color:var(--ink);background:var(--panel-2)}
+.hint.gone{opacity:0;pointer-events:none}
+.joy{position:fixed;left:calc(22px + env(safe-area-inset-left));bottom:calc(26px + var(--safe-b));z-index:12;width:118px;height:118px;border-radius:50%;border:1px solid #ffffff2e;background:#0d111799;display:none;touch-action:none}
+.joy i{position:absolute;left:50%;top:50%;width:48px;height:48px;margin:-24px 0 0 -24px;border-radius:50%;background:#f2f4f7;box-shadow:0 6px 16px #0008}
+.joy-label{position:absolute;inset:auto 0 -22px;text-align:center;font-size:.7rem;color:var(--ink-3);letter-spacing:.05em;text-transform:uppercase}
+
+/* detalle */
+.detail{position:fixed;z-index:25;top:16px;right:16px;bottom:16px;width:400px;display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:20px;box-shadow:0 24px 60px -16px #000c;transition:transform .5s var(--ease),opacity .3s;overflow:hidden}
+.detail[hidden]{display:flex;transform:translateX(calc(100% + 32px));opacity:0;pointer-events:none}
+.d-scroll{flex:1;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--line-2) transparent}
+.d-photo{position:relative;aspect-ratio:4/3;background:#1b2330}
+.d-photo img{width:100%;height:100%;object-fit:cover;display:block;color:transparent}
+.d-photo .count{position:absolute;right:10px;bottom:10px;font-size:.74rem;font-weight:700;padding:4px 8px;border-radius:8px;background:#0d1117cc;font-variant-numeric:tabular-nums}
+.d-photo .nav{position:absolute;top:50%;transform:translateY(-50%);width:40px;height:40px;border-radius:50%;border:0;background:#0d1117b3;color:#fff;display:grid;place-items:center;cursor:pointer}
+.d-photo .nav:hover{background:#0d1117}
+.d-photo .prev{left:10px} .d-photo .next{right:10px}
+.d-photo .nav svg{width:18px;height:18px}
+.d-close{position:absolute;top:10px;right:10px;z-index:2;width:40px;height:40px;border-radius:50%;border:0;background:#0d1117cc;color:#fff;display:grid;place-items:center;cursor:pointer}
+.d-close svg{width:18px;height:18px}
+.thumbs{display:flex;gap:6px;padding:8px 12px 0;overflow-x:auto;scrollbar-width:none}
+.thumbs::-webkit-scrollbar{display:none}
+.thumbs button{flex:none;width:58px;height:44px;padding:0;border-radius:8px;border:2px solid transparent;overflow:hidden;background:#1b2330;cursor:pointer;opacity:.7}
+.thumbs button[aria-current="true"]{border-color:var(--blue-hi);opacity:1}
+.thumbs img{width:100%;height:100%;object-fit:cover;display:block}
+.d-body{padding:16px 18px 6px}
+.d-zone{font-size:.78rem;font-weight:700;color:var(--blue-hi)}
+.d-body h2{margin:4px 0 6px;font-size:1.35rem;line-height:1.15;font-weight:800;font-stretch:108%;letter-spacing:-.01em;text-wrap:balance}
+.d-price{font-size:1.6rem;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.d-price small{font-size:.8rem;font-weight:600;color:var(--ink-3);margin-left:6px}
+.specs{display:grid;grid-template-columns:1fr 1fr;gap:1px;margin:14px 0 4px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.specs div{background:var(--panel);padding:9px 12px}
+.specs dt{font-size:.72rem;color:var(--ink-3);font-weight:600}
+.specs dd{margin:1px 0 0;font-size:.9rem;font-weight:700;font-variant-numeric:tabular-nums}
+.d-views{display:flex;gap:8px;padding:14px 0 0}
+.d-views .btn{padding:0 12px}
+.d-views .btn{flex:1;min-width:0}
+.d-views .icon-btn{flex:none;width:44px}
+.note{padding:10px 18px 14px;font-size:.76rem;color:var(--ink-3)}
+.d-foot{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:12px 18px calc(14px + var(--safe-b));border-top:1px solid var(--line);background:var(--panel)}
+.d-foot .full{grid-column:1/-1}
+.d-step{display:flex;gap:8px}
+.d-step .btn{flex:1}
+
+/* indicador de modo */
+.mode{position:fixed;left:50%;top:76px;transform:translateX(-50%);z-index:12;padding:8px 14px;border-radius:999px;background:#0d1117d9;border:1px solid var(--line);font-size:.8rem;color:var(--ink-2);display:none}
+.mode b{color:var(--ink)}
+
+/* carga */
+.loader{position:fixed;inset:0;z-index:50;display:grid;place-items:center;background:var(--bg);transition:opacity .6s,visibility .6s}
+.loader.done{opacity:0;visibility:hidden}
+.loader div{text-align:center}
+.loader strong{display:block;font-size:clamp(1.8rem,5vw,3rem);font-weight:800;font-stretch:122%;letter-spacing:-.02em}
+.loader span{display:block;margin-top:6px;color:var(--ink-3);font-size:.9rem}
+.bar{width:220px;height:3px;margin:18px auto 0;background:var(--line);border-radius:3px;overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--blue-hi);transition:width .3s}
+.err{max-width:420px;padding:0 24px;color:var(--ink-2)}
+
+@media (max-width:860px){
+  .catalog{top:auto;left:0;right:0;bottom:0;width:auto;height:min(68vh,560px);border-radius:20px 20px 0 0;padding-bottom:var(--safe-b)}
+  .catalog.closed{transform:translateY(calc(100% + 24px))}
+  .detail{top:auto;left:0;right:0;bottom:0;width:auto;height:min(78vh,700px);border-radius:20px 20px 0 0}
+  .detail[hidden]{transform:translateY(calc(100% + 24px))}
+  .hint{display:none}
+  .joy{display:block}
+  .brand small{display:none}
+  .mode{top:68px}
+}
+@media (hover:none) and (pointer:coarse){ .joy{display:block} .hint{display:none} }
+@media (prefers-reduced-motion:reduce){ *{transition-duration:.01ms!important} }
+</style>
+</head>
+<body>
+<canvas id="c" aria-label="Galpón 3D de Tutu Automotores con los autos en stock. Usá el catálogo para elegir un auto."></canvas>
+
+<header class="top">
+  <a class="brand" href="https://tutuautomotores.com" target="_blank" rel="noopener" id="brand">
+    <img src="https://tutuautomotores.com/wp-content/uploads/2025/08/logo.svg" alt="Tutu Automotores" referrerpolicy="no-referrer" onerror="this.parentNode.classList.add('noimg')">
+    <span class="wm">TUTU AUTOMOTORES</span>
+    <small>Galpón 3D</small>
+  </a>
+  <div class="spacer"></div>
+  <button class="btn" id="btn-cat" aria-expanded="true" aria-controls="catalog">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+    <span>Catálogo</span>
+  </button>
+</header>
+
+<aside class="catalog" id="catalog" aria-label="Catálogo de vehículos">
+  <div class="cat-head">
+    <h2>Autos en el galpón</h2>
+    <p id="cat-count"></p>
+    <div class="search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <label class="sr" for="q">Buscar por marca o modelo</label>
+      <input id="q" type="search" placeholder="Buscá marca o modelo" autocomplete="off">
+    </div>
+  </div>
+  <div class="chips" id="chips" role="group" aria-label="Filtrar por tipo"></div>
+  <div class="sortrow">
+    <span id="shown"></span>
+    <label><span class="sr">Ordenar</span>
+      <select id="sort">
+        <option value="zona">Como están en el galpón</option>
+        <option value="precio">Menor precio</option>
+        <option value="precio-desc">Mayor precio</option>
+        <option value="anio">Más nuevos</option>
+        <option value="km">Menos kilómetros</option>
+      </select>
+    </label>
+  </div>
+  <div class="list" id="list"></div>
+</aside>
+
+<div id="tags" aria-hidden="true"></div>
+<div class="mode" id="mode" role="status" aria-live="polite"></div>
+
+<div class="hint" id="hint">
+  <span><kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> caminar</span>
+  <span>Arrastrá para mirar</span>
+  <span>Tocá un auto para verlo</span>
+</div>
+<div class="joy" id="joy" aria-hidden="true"><i></i><span class="joy-label">Caminar</span></div>
+
+<section class="detail" id="detail" hidden aria-labelledby="d-name">
+  <div class="d-scroll">
+    <div class="d-photo">
+      <img id="d-img" alt="" referrerpolicy="no-referrer">
+      <button class="d-close" id="d-close" aria-label="Volver al galpón"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+      <button class="nav prev" id="p-prev" aria-label="Foto anterior"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
+      <button class="nav next" id="p-next" aria-label="Foto siguiente"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></button>
+      <span class="count" id="p-count"></span>
+    </div>
+    <div class="thumbs" id="thumbs"></div>
+    <div class="d-body">
+      <div class="d-zone" id="d-zone"></div>
+      <h2 id="d-name"></h2>
+      <div class="d-price" id="d-price"></div>
+      <div class="d-views">
+      <button class="btn" id="v-ext" aria-pressed="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/></svg>Vista 360°
+      </button>
+      <button class="btn" id="v-int" aria-pressed="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.5"/><path d="M12 14.5V21M9.6 11.2 3.4 9.5M14.4 11.2l6.2-1.7"/></svg>Interior
+      </button>
+      <button class="btn icon-btn" id="v-spin" aria-pressed="true" aria-label="Girar solo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+      </button>
+    </div>
+      <dl class="specs" id="d-specs"></dl>
+    </div>
+    <p class="note" id="d-note">El modelo 3D es una representación del tipo de vehículo con su color. Las fotos son las reales del auto.</p>
+  </div>
+  <div class="d-foot">
+    <a class="btn btn-wa full" id="d-wa" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.2-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.7 11.8 11.8 0 0 0 4.5 4c1.7.7 2.3.8 3.1.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.2-1.2-.1-.1-.3-.2-.5-.3Z"/></svg>
+      Consultar por WhatsApp
+    </a>
+    <a class="btn" id="d-link" target="_blank" rel="noopener">Ver publicación</a>
+    <div class="d-step">
+      <button class="btn icon-btn" id="d-prev" aria-label="Auto anterior"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
+      <button class="btn icon-btn" id="d-next" aria-label="Auto siguiente"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></button>
+    </div>
+  </div>
+</section>
+
+<div class="loader" id="loader"><div><strong>TUTU</strong><span id="load-msg">Abriendo el galpón…</span><div class="bar"><i id="load-bar"></i></div></div></div>
+
+<script type="application/json" id="stock">[["GWM HAVAL H6 GT 2.0 4WD 7DCT 2025","gwm-haval-h6-gt-2-0-4wd-7dct-2025",38000,"USD","2025","11300","Chinos/SUV","Automática","GRIS NARDO","Usado","","2.0","GWM/Haval",["2026/11/WhatsApp-Image-2026-11-05-at-4.36.31-PM-1.jpeg","2026/11/WhatsApp-Image-2026-11-05-at-4.36.32-PM-1.jpeg","2026/11/WhatsApp-Image-2026-11-05-at-4.36.32-PM.jpeg","2026/11/WhatsApp-Image-2026-11-05-at-4.36.42-PM-1.jpeg","2026/11/WhatsApp-Image-2026-11-05-at-4.36.33-PM-2.jpeg","2026/11/WhatsApp-Image-2026-11-05-at-4.36.37-PM-2.jpeg","2026/11/WhatsApp-Image-2026-11-05-at-4.36.37-PM-1.jpeg","2026/11/WhatsApp-Image-2026-11-05-at-4.36.38-PM.jpeg","2026/11/WhatsApp-Image-2026-11-05-at-4.36.36-PM-1.jpeg","2026/11/WhatsApp-Image-2026-11-05-at-4.36.35-PM-1.jpeg"]],["CITROEN C3 1.6 VTI FEEL 2017","citroen-c3-1-6-vti-feel-2017",15000000,"ARS","2017","93000","Hatchback","Manual","GRIS PLATA","Usado","Nafta","1.6","CITROEN",["2026/11/WhatsApp-Image-2026-11-04-at-6.27.41-PM-1.jpeg","2026/11/WhatsApp-Image-2026-11-04-at-6.27.44-PM-1.jpeg","2026/11/WhatsApp-Image-2026-11-04-at-6.27.44-PM.jpeg","2026/11/WhatsApp-Image-2026-11-04-at-6.27.44-PM-2.jpeg","2026/11/WhatsApp-Image-2026-11-04-at-6.27.45-PM-1.jpeg","2026/11/WhatsApp-Image-2026-11-04-at-6.27.45-PM.jpeg","2026/11/WhatsApp-Image-2026-11-04-at-6.27.45-PM-2.jpeg","2026/11/WhatsApp-Image-2026-11-04-at-6.27.45-PM-3.jpeg","2026/11/a5be2d60-ba9a-4e5d-8105-ea190f6ab206.jpg","2026/11/WhatsApp-Image-2026-11-04-at-6.28.13-PM.jpeg"]],["DS3 1.2 T CROSSBACK SO CHIC 2019","ds3-1-2-t-crossback-so-chic-2019",29200000,"ARS","2019","135000","SUV","Automática","AZUL PETROLEO","Usado","Nafta","1.2T","DS",["2026/11/WhatsApp-Image-2026-11-04-at-11.43.52-AM.jpeg","2026/11/WhatsApp-Image-2026-11-04-at-11.43.53-AM-1.jpeg","2026/11/WhatsApp-Image-2026-11-04-at-11.44.11-AM.jpeg","2026/11/WhatsApp-Image-2026-11-04-at-11.43.54-AM.jpeg","2026/11/WhatsApp-Image-2026-11-04-at-11.44.10-AM.jpeg","2026/11/WhatsApp-Image-2026-11-04-at-11.44.07-AM.jpeg","2026/11/WhatsApp-Image-2026-11-04-at-11.44.09-AM.jpeg","2026/11/WhatsApp-Image-2026-11-04-at-11.44.06-AM.jpeg","2026/11/WhatsApp-Image-2026-11-04-at-11.44.09-AM-1.jpeg","2026/11/WhatsApp-Image-2026-11-04-at-11.43.56-AM.jpeg"]],["CHEVROLET ONIX JOY 5P 1.4 N LS MT 2019","chevrolet-onix-joy-5p-1-4-n-ls-mt-2019",15500000,"ARS","2019","85500","Hatchback","Manual","GRIS ACERO","Usado","Nafta","1.4","Chevrolet",["2026/11/WhatsApp-Image-2026-11-03-at-4.30.30-PM-2.jpeg","2026/11/WhatsApp-Image-2026-11-03-at-4.30.30-PM-1.jpeg","2026/11/WhatsApp-Image-2026-11-03-at-4.30.30-PM.jpeg","2026/11/WhatsApp-Image-2026-11-03-at-4.30.31-PM.jpeg","2026/11/WhatsApp-Image-2026-11-03-at-4.30.32-PM-1.jpeg","2026/11/WhatsApp-Image-2026-11-03-at-4.30.31-PM-1.jpeg","2026/11/WhatsApp-Image-2026-11-03-at-4.30.32-PM-2.jpeg","2026/11/WhatsApp-Image-2026-11-03-at-4.30.32-PM.jpeg","2026/11/WhatsApp-Image-2026-11-03-at-4.31.04-PM.jpeg","2026/11/WhatsApp-Image-2026-11-03-at-4.30.33-PM.jpeg"]],["RENAULT SANDERO STEPWAY EXPRESSION 1.6N MT","renault-sandero-stepway-expression-1-6n-mt",17500000,"ARS","2018","106000","SUV","Manual","BORDO","Usado","Nafta","1.6","Renault",["2026/11/WhatsApp-Image-2026-11-04-at-11.18.48-AM.jpeg","2026/11/WhatsApp-Image-2026-11-04-at-11.18.48-AM-1.jpeg","2026/11/WhatsApp-Image-2026-11-04-at-11.18.48-AM-2.jpeg","2026/11/WhatsApp-Image-2026-11-04-at-11.18.49-AM.jpeg","2026/11/WhatsApp-Image-2026-11-04-at-11.18.55-AM.jpeg","2026/11/WhatsApp-Image-2026-11-04-at-11.18.54-AM-1.jpeg","2026/11/WhatsApp-Image-2026-11-04-at-11.18.53-AM-1.jpeg","2026/11/WhatsApp-Image-2026-11-04-at-11.18.54-AM.jpeg","2026/11/WhatsApp-Image-2026-11-04-at-11.18.52-AM.jpeg","2026/11/WhatsApp-Image-2026-11-04-at-11.18.52-AM-1.jpeg"]],["JMEV EASY 3 100% ELÉCTRICO 0km!","jmev-easy-3-100-electrico-0km",18900,"USD","2026","0","Chinos/Hatchback","Automática","","Nuevo","Eléctrico","","JMEV",["2026/11/WhatsApp-Image-2026-10-30-at-3.43.10-PM-1.jpeg","2026/11/WhatsApp-Image-2026-10-30-at-3.43.10-PM-2.jpeg","2026/11/WhatsApp-Image-2026-10-30-at-3.43.10-PM.jpeg","2026/11/WhatsApp-Image-2026-10-30-at-3.43.11-PM-2.jpeg","2026/11/WhatsApp-Image-2026-10-30-at-3.43.12-PM.jpeg","2026/11/WhatsApp-Image-2026-10-30-at-3.43.12-PM-2.jpeg","2026/11/WhatsApp-Image-2026-10-30-at-3.43.12-PM-1.jpeg","2026/11/WhatsApp-Image-2026-10-30-at-3.43.14-PM.jpeg","2026/11/WhatsApp-Image-2026-10-30-at-3.43.14-PM-1.jpeg","2026/11/WhatsApp-Image-2026-10-30-at-3.46.10-PM-1.jpeg"]],["CHANGAN CS55 PLUS PHEV 0KM 2026","changan-cs55-plus-phev-0km-2026",31990,"USD","2026","0","Chinos/SUV","Automática","","Nuevo","Híbrido eléctrico enchufable","","Changan",["2026/10/WhatsApp-Image-2026-10-30-at-10.01.19-AM.jpeg","2026/10/WhatsApp-Image-2026-10-30-at-10.01.18-AM-1.jpeg","2026/10/WhatsApp-Image-2026-10-30-at-10.01.18-AM.jpeg","2026/10/WhatsApp-Image-2026-10-30-at-10.01.19-AM.jpeg","2026/10/WhatsApp-Image-2026-10-30-at-10.01.26-AM-3.jpeg","2026/10/WhatsApp-Image-2026-10-30-at-10.01.19-AM-2.jpeg","2026/10/WhatsApp-Image-2026-10-30-at-10.01.21-AM.jpeg","2026/10/WhatsApp-Image-2026-10-30-at-10.01.20-AM-2.jpeg","2026/10/WhatsApp-Image-2026-10-30-at-10.01.20-AM-3.jpeg","2026/10/WhatsApp-Image-2026-10-30-at-10.01.22-AM.jpeg"]],["NISSAN KICKS 1.6 SENSE MT C/GNC 2020","nissan-kicks-1-6-sense-mt-c-gnc-2020",23200000,"ARS","2020","129000","SUV","Manual","BLANCO","Usado","GNC/Nafta","1.6","Nissan",["2026/10/WhatsApp-Image-2026-10-29-at-12.07.56-PM.jpeg","2026/10/WhatsApp-Image-2026-10-29-at-12.07.57-PM-2.jpeg","2026/10/WhatsApp-Image-2026-10-29-at-12.07.57-PM-1.jpeg","2026/10/WhatsApp-Image-2026-10-29-at-12.07.58-PM.jpeg","2026/10/WhatsApp-Image-2026-10-29-at-12.07.57-PM-3.jpeg","2026/10/WhatsApp-Image-2026-10-29-at-12.07.58-PM-1.jpeg","2026/10/WhatsApp-Image-2026-10-29-at-12.07.58-PM-2.jpeg","2026/10/WhatsApp-Image-2026-10-29-at-12.07.59-PM.jpeg","2026/10/WhatsApp-Image-2026-10-29-at-12.08.02-PM.jpeg","2026/10/WhatsApp-Image-2026-10-29-at-12.08.02-PM-1.jpeg"]],["FIAT CRONOS DRIVE 1.3N MT 2025","fiat-cronos-drive-1-3n-mt-2025",25000000,"ARS","2025","40000","Sedan","Manual","GRIS PLATA","Usado","Nafta","1.3","Fiat",["2026/10/WhatsApp-Image-2026-10-29-at-11.35.18-AM-3.jpeg","2026/10/WhatsApp-Image-2026-10-29-at-11.35.18-AM-2.jpeg","2026/10/WhatsApp-Image-2026-10-29-at-11.35.18-AM-1.jpeg","2026/10/WhatsApp-Image-2026-10-29-at-11.35.19-AM.jpeg","2026/10/WhatsApp-Image-2026-10-29-at-11.35.19-AM-1.jpeg","2026/10/WhatsApp-Image-2026-10-29-at-11.35.19-AM-2.jpeg","2026/10/WhatsApp-Image-2026-10-29-at-11.35.20-AM.jpeg","2026/10/WhatsApp-Image-2026-10-29-at-11.35.19-AM-3.jpeg","2026/10/WhatsApp-Image-2026-10-29-at-11.35.32-AM-2.jpeg","2026/10/WhatsApp-Image-2026-10-29-at-11.35.31-AM-1.jpeg"]],["JEEP COMPASS SPORT 2.4N 4X2 2021","jeep-compass-sport-2-4n-4x2-2021",29900000,"ARS","2021","90000","SUV","Automática","BLANCO","Usado","Nafta","2.4L","Jeep",["2026/10/WhatsApp-Image-2026-10-29-at-12.27.25-PM.jpeg","2026/10/WhatsApp-Image-2026-10-29-at-12.27.23-PM.jpeg","2026/10/WhatsApp-Image-2026-10-29-at-12.27.24-PM.jpeg","2026/10/WhatsApp-Image-2026-10-29-at-12.27.26-PM.jpeg","2026/10/WhatsApp-Image-2026-10-29-at-12.27.26-PM-1.jpeg","2026/10/WhatsApp-Image-2026-10-29-at-12.27.29-PM.jpeg","2026/10/WhatsApp-Image-2026-10-29-at-12.27.27-PM.jpeg","2026/10/WhatsApp-Image-2026-10-29-at-12.27.27-PM-1.jpeg","2026/10/WhatsApp-Image-2026-10-29-at-12.27.36-PM.jpeg","2026/10/WhatsApp-Image-2026-10-29-at-12.27.38-PM.jpeg"]],["FORD FIESTA KINETIC 1.6L S 5P 2015","ford-fiesta-kinetic-1-6l-s-5p-2015",14000000,"ARS","2015","166000","Hatchback","Manual","BLANCO","Usado","Nafta","1.6N","Ford",["2026/10/WhatsApp-Image-2026-10-29-at-6.32.58-PM-1.jpeg","2026/10/WhatsApp-Image-2026-10-29-at-6.32.58-PM.jpeg","2026/10/WhatsApp-Image-2026-10-29-at-6.32.59-PM.jpeg","2026/10/WhatsApp-Image-2026-10-29-at-6.33.00-PM.jpeg","2026/10/WhatsApp-Image-2026-10-29-at-6.32.59-PM-3.jpeg","2026/10/WhatsApp-Image-2026-10-29-at-6.33.00-PM-1.jpeg","2026/10/WhatsApp-Image-2026-10-29-at-6.32.59-PM-2.jpeg","2026/10/WhatsApp-Image-2026-10-29-at-6.33.00-PM-2.jpeg","2026/10/WhatsApp-Image-2026-10-29-at-6.33.12-PM.jpeg","2026/10/WhatsApp-Image-2026-10-29-at-6.33.01-PM-2.jpeg"]],["VOLKSWAGEN VENTO 2.0 TSI SPORTLINE 2011","volkswagen-vento-2-0-tsi-sportline-2011",21500000,"ARS","2011","157000","Sedan","Manual","GRIS OSCURO","Usado","Nafta","2.0","Volkswagen",["2026/10/WhatsApp-Image-2026-10-29-at-6.35.51-PM-1.jpeg","2026/10/WhatsApp-Image-2026-10-29-at-6.35.51-PM-2.jpeg","2026/10/WhatsApp-Image-2026-10-29-at-6.35.51-PM-3.jpeg","2026/10/WhatsApp-Image-2026-10-29-at-6.35.52-PM-1.jpeg","2026/10/WhatsApp-Image-2026-10-29-at-6.35.52-PM.jpeg","2026/10/WhatsApp-Image-2026-10-29-at-6.35.53-PM.jpeg","2026/10/WhatsApp-Image-2026-10-29-at-6.35.53-PM-2.jpeg","2026/10/WhatsApp-Image-2026-10-29-at-6.35.53-PM-1.jpeg","2026/10/WhatsApp-Image-2026-10-29-at-6.35.53-PM-3.jpeg","2026/10/WhatsApp-Image-2026-10-29-at-6.35.54-PM.jpeg"]],["GWM HAVAL JOLION 1.5T HEV SUPREME AT 0KM","gwm-haval-jolion-1-5t-hev-supreme-at-0km",28990,"USD","2026","0","Chinos/SUV","Automática","BLANCO","Nuevo","HIBRIDO","","GWM/Haval",["2026/10/WhatsApp-Image-2026-10-26-at-6.41.01-PM-1.jpeg","2026/10/WhatsApp-Image-2026-10-26-at-6.41.01-PM-2.jpeg","2026/10/WhatsApp-Image-2026-10-26-at-6.41.02-PM-1.jpeg","2026/10/WhatsApp-Image-2026-10-26-at-6.41.03-PM-2.jpeg","2026/10/WhatsApp-Image-2026-10-26-at-6.50.28-PM-1.jpeg","2026/10/WhatsApp-Image-2026-10-26-at-6.41.04-PM-3.jpeg","2026/10/WhatsApp-Image-2026-10-26-at-6.41.04-PM-2.jpeg","2026/10/WhatsApp-Image-2026-10-26-at-6.41.04-PM-1.jpeg","2026/10/WhatsApp-Image-2026-10-26-at-6.50.27-PM-2.jpeg","2026/10/WhatsApp-Image-2026-10-26-at-6.50.27-PM-1.jpeg"]],["TOYOTA SW4 4X4 SRX 2.8 TDI 6 AT 7A 2023","toyota-sw4-4x4-srx-2-8-tdi-6-at-7a-2023",48000,"USD","2023","17000","SUV","Automática","GRIS PLATA","Usado","Diesel","2.8","TOYOTA",["2026/10/WhatsApp-Image-2026-10-20-at-2.48.41-PM.jpeg","2026/10/WhatsApp-Image-2026-10-20-at-2.48.48-PM.jpeg","2026/10/WhatsApp-Image-2026-10-20-at-2.48.41-PM-1.jpeg","2026/10/WhatsApp-Image-2026-10-20-at-2.48.41-PM-2.jpeg","2026/10/WhatsApp-Image-2026-10-20-at-2.48.43-PM.jpeg","2026/10/WhatsApp-Image-2026-10-20-at-2.48.43-PM-3.jpeg","2026/10/WhatsApp-Image-2026-10-20-at-2.48.43-PM-2.jpeg","2026/10/WhatsApp-Image-2026-10-20-at-2.48.43-PM-1.jpeg","2026/10/WhatsApp-Image-2026-10-20-at-2.48.44-PM-2.jpeg","2026/10/WhatsApp-Image-2026-10-20-at-2.48.44-PM.jpeg"]],["NISSAN KICKS 1.6 ADVANCE PLUS CVT 2023","nissan-kicks-1-6-advance-plus-cvt-2023",35000000,"ARS","2023","51000","SUV","Automática","BLANCO","Usado","Nafta","1.6","Nissan",["2026/10/WhatsApp-Image-2026-10-21-at-2.30.16-PM.jpeg","2026/10/WhatsApp-Image-2026-10-21-at-2.30.17-PM.jpeg","2026/10/WhatsApp-Image-2026-10-21-at-2.30.17-PM-1.jpeg","2026/10/WhatsApp-Image-2026-10-21-at-2.30.17-PM-2.jpeg","2026/10/WhatsApp-Image-2026-10-21-at-2.30.18-PM-1.jpeg","2026/10/WhatsApp-Image-2026-10-21-at-2.30.18-PM.jpeg","2026/10/WhatsApp-Image-2026-10-21-at-2.30.21-PM.jpeg","2026/10/WhatsApp-Image-2026-10-21-at-2.30.20-PM-1.jpeg","2026/10/WhatsApp-Image-2026-10-21-at-2.30.20-PM-2.jpeg","2026/10/WhatsApp-Image-2026-10-21-at-2.30.19-PM-2.jpeg"]],["AUDI A3 1.4 TFSI STRONIC 4P L/17 2017","audi-a3-1-4-tfsi-stronic-4p-l-17-2017",22500,"USD","2017","112.000","Sedan","Automática","GRIS PLATA","Usado","Nafta","1.4","AUDI",["2026/10/WhatsApp-Image-2026-10-22-at-5.44.15-PM.jpeg","2026/10/WhatsApp-Image-2026-10-22-at-5.44.16-PM.jpeg","2026/10/WhatsApp-Image-2026-10-22-at-5.44.22-PM.jpeg","2026/10/WhatsApp-Image-2026-10-22-at-5.44.22-PM-1.jpeg","2026/10/WhatsApp-Image-2026-10-22-at-5.44.28-PM.jpeg","2026/10/WhatsApp-Image-2026-10-22-at-5.44.28-PM-1.jpeg","2026/10/WhatsApp-Image-2026-10-22-at-5.44.29-PM.jpeg","2026/10/WhatsApp-Image-2026-10-22-at-5.44.30-PM.jpeg","2026/10/WhatsApp-Image-2026-10-22-at-5.44.31-PM-1.jpeg","2026/10/WhatsApp-Image-2026-10-22-at-5.44.32-PM.jpeg"]],["FORD KA 1.6N PULSE 3P 2008","ford-ka-1-6n-pulse-3p-2008",9500000,"ARS","2008","124000","","","NEGRO","Usado","Nafta","","Ford",["2026/10/WhatsApp-Image-2026-10-23-at-10.35.55-AM.jpeg","2026/10/WhatsApp-Image-2026-10-23-at-10.35.56-AM-1.jpeg","2026/10/WhatsApp-Image-2026-10-23-at-10.35.56-AM.jpeg","2026/10/WhatsApp-Image-2026-10-23-at-10.35.56-AM-2.jpeg","2026/10/WhatsApp-Image-2026-10-23-at-10.35.57-AM.jpeg","2026/10/WhatsApp-Image-2026-10-23-at-10.35.58-AM.jpeg","2026/10/WhatsApp-Image-2026-10-23-at-10.35.59-AM.jpeg","2026/10/WhatsApp-Image-2026-10-23-at-10.35.57-AM-1.jpeg","2026/10/WhatsApp-Image-2026-10-23-at-10.36.04-AM.jpeg","2026/10/WhatsApp-Image-2026-10-23-at-10.35.59-AM-1.jpeg"]],["GWM ORA 03 SR 100% ELECTRICO","gwm-ora-03-sr-100-electrico",29000,"USD","2026","0","Chinos/Hatchback","Automática","","Nuevo","Eléctrico","","GWM",["2026/10/WhatsApp-Image-2026-10-22-at-4.45.36-PM.jpeg","2026/10/WhatsApp-Image-2026-10-22-at-4.45.37-PM.jpeg","2026/10/WhatsApp-Image-2026-10-22-at-4.45.37-PM-1.jpeg","2026/10/WhatsApp-Image-2026-10-22-at-4.45.37-PM-2.jpeg","2026/10/WhatsApp-Image-2026-10-22-at-4.45.38-PM.jpeg","2026/10/WhatsApp-Image-2026-10-22-at-4.45.43-PM-1.jpeg","2026/10/WhatsApp-Image-2026-10-22-at-4.45.44-PM.jpeg","2026/10/WhatsApp-Image-2026-10-22-at-4.45.44-PM-1.jpeg","2026/10/WhatsApp-Image-2026-10-22-at-4.45.38-PM-1.jpeg","2026/10/WhatsApp-Image-2026-10-22-at-4.45.38-PM-2.jpeg"]],["DEEPAL S05 PHEV 2026 0KM","deepal-s05-phev-2026-0km-copia",35500,"USD","2026","0","Chinos/SUV","Automática","","Nuevo","Híbrido eléctrico enchufable","1.5","DEEPAL",["2026/10/DEEPAL-S05-21.jpeg","2026/10/DEEPAL-S05-20.jpeg","2026/10/DEEPAL-S05-22.jpeg","2026/10/DEEPAL-S05-15.jpeg","2026/10/DEEPAL-S05-14.jpeg","2026/10/DEEPAL-S05-17.jpeg","2026/10/DEEPAL-S05-16.jpeg","2026/10/DEEPAL-S05-24.jpeg","2026/10/DEEPAL-S05-2.jpeg","2026/10/DEEPAL-S05-3.jpeg"]],["DEEPAL S05 PHEV 2026 0KM","deepal-s05-phev-2026-0km",35500,"USD","2026","0","Chinos/SUV","Automática","","Nuevo","Híbrido eléctrico enchufable","1.5","DEEPAL",["2026/10/WhatsApp-Image-2026-10-01-at-1.33.21-PM.jpeg","2026/10/WhatsApp-Image-2026-10-01-at-1.33.22-PM-1.jpeg","2026/10/WhatsApp-Image-2026-10-01-at-1.33.23-PM.jpeg","2026/10/WhatsApp-Image-2026-10-01-at-1.33.23-PM-1-1.jpeg","2026/10/WhatsApp-Image-2026-10-01-at-1.33.25-PM-2.jpeg","2026/10/WhatsApp-Image-2026-10-01-at-1.33.26-PM.jpeg","2026/10/WhatsApp-Image-2026-10-01-at-1.33.27-PM-1.jpeg","2026/10/WhatsApp-Image-2026-10-01-at-1.33.27-PM-2.jpeg","2026/10/WhatsApp-Image-2026-10-01-at-1.33.27-PM.jpeg","2026/10/WhatsApp-Image-2026-10-01-at-1.33.28-PM-1.jpeg"]],["CHANGAN CS55 PLUS PHEV 0KM","changan-cs55-plus-phev-0km",31990,"USD","2026","0","Chinos/SUV","Automática","","Nuevo","Híbrido eléctrico enchufable","","Changan",["2026/10/WhatsApp-Image-2026-10-09-at-6.53.49-PM-1.jpeg","2026/10/WhatsApp-Image-2026-10-09-at-6.53.48-PM.jpeg","2026/10/WhatsApp-Image-2026-10-09-at-6.53.49-PM.jpeg","2026/10/WhatsApp-Image-2026-10-09-at-6.53.50-PM-2.jpeg","2026/10/WhatsApp-Image-2026-10-09-at-6.54.14-PM-1.jpeg","2026/10/WhatsApp-Image-2026-10-09-at-6.54.14-PM.jpeg","2026/10/WhatsApp-Image-2026-10-09-at-6.54.12-PM-1.jpeg","2026/10/WhatsApp-Image-2026-10-09-at-6.54.12-PM.jpeg","2026/10/WhatsApp-Image-2026-10-09-at-6.53.51-PM-2.jpeg","2026/10/WhatsApp-Image-2026-10-09-at-6.53.52-PM.jpeg"]],["GWM HAVAL H6 PRO HEV SUPREME 2WD 0km","gwm-haval-h6-pro-hev-supreme-2wd-0km",35500,"USD","2026","0","Chinos/SUV","Automática","BLANCO","Nuevo","HIBRIDO","1.5 L Turbo 4 cilindros","Haval",["2026/10/WhatsApp-Image-2026-10-01-at-12.58.49-PM.jpeg","2026/10/WhatsApp-Image-2026-10-01-at-12.58.50-PM-1.jpeg","2026/10/WhatsApp-Image-2026-10-01-at-12.58.50-PM-2.jpeg","2026/10/WhatsApp-Image-2026-10-01-at-12.58.50-PM.jpeg","2026/10/WhatsApp-Image-2026-10-01-at-12.58.51-PM-1.jpeg","2026/10/WhatsApp-Image-2026-10-01-at-12.58.53-PM.jpeg","2026/10/WhatsApp-Image-2026-10-01-at-12.58.52-PM.jpeg","2026/10/WhatsApp-Image-2026-10-01-at-12.58.55-PM-1.jpeg","2026/10/WhatsApp-Image-2026-10-01-at-12.58.55-PM.jpeg","2026/10/WhatsApp-Image-2026-10-01-at-12.58.56-PM.jpeg"]],["RENAULT KOLEOS 2.5 DYNAMIQUE PLUS 4X4 CVT 2014","renault-koleos-dynamique-plus-4x4-cvt-2014",11900,"USD","2014","96000","SUV","Automática","Marrón","Usado","Nafta","2.5","Renault",["2026/10/WhatsApp-Image-2026-10-06-at-10.44.52-AM.jpeg","2026/10/WhatsApp-Image-2026-10-06-at-10.44.54-AM.jpeg","2026/10/WhatsApp-Image-2026-10-06-at-10.44.55-AM.jpeg","2026/10/WhatsApp-Image-2026-10-06-at-10.44.56-AM-1.jpeg","2026/10/WhatsApp-Image-2026-10-06-at-10.44.56-AM.jpeg","2026/10/WhatsApp-Image-2026-10-06-at-10.44.57-AM-1.jpeg","2026/10/WhatsApp-Image-2026-10-06-at-10.44.57-AM.jpeg","2026/10/WhatsApp-Image-2026-10-06-at-10.44.58-AM-1.jpeg","2026/10/WhatsApp-Image-2026-10-06-at-10.45.11-AM.jpeg","2026/10/WhatsApp-Image-2026-10-06-at-10.45.08-AM-2.jpeg"]],["FORD FOCUS 4P 1.6L MT S 2017","ford-focus-4p-1-6l-mt-s-2017",18000000,"ARS","2017","131000","Oportunidades/Sedan","Manual","GRIS PLATA","Usado","Nafta","1.6","Ford",["2026/10/WhatsApp-Image-2026-10-21-at-6.37.29-PM.jpeg","2026/10/WhatsApp-Image-2026-10-21-at-6.37.30-PM-2.jpeg","2026/10/WhatsApp-Image-2026-10-21-at-6.37.30-PM-1.jpeg","2026/10/WhatsApp-Image-2026-10-21-at-6.37.31-PM-1.jpeg","2026/10/WhatsApp-Image-2026-10-21-at-6.37.31-PM-2.jpeg","2026/10/WhatsApp-Image-2026-10-21-at-6.37.31-PM-3.jpeg","2026/10/WhatsApp-Image-2026-10-21-at-6.37.31-PM.jpeg","2026/10/WhatsApp-Image-2026-10-21-at-6.37.29-PM-1.jpeg","2026/10/WhatsApp-Image-2026-10-21-at-6.37.32-PM-2.jpeg","2026/10/WhatsApp-Image-2026-10-21-at-6.37.32-PM-1.jpeg"]],["VOLKSWAGEN TIGUAN 1.4 TSI ALLSPACE TRENDLINE 2021","volkswagen-tiguan-1-4-tsi-allspace-trendline-2021-2",37100000,"ARS","2021","113500","Oportunidades/SUV","Automática","AZUL","Usado","Nafta","1.4","Volkswagen",["2026/10/WhatsApp-Image-2026-10-06-at-5.17.41-PM-1.jpeg","2026/10/WhatsApp-Image-2026-10-06-at-5.17.41-PM.jpeg","2026/10/WhatsApp-Image-2026-10-06-at-5.17.40-PM.jpeg","2026/10/WhatsApp-Image-2026-10-06-at-5.17.54-PM-2.jpeg","2026/10/WhatsApp-Image-2026-10-06-at-5.17.54-PM-1.jpeg","2026/10/WhatsApp-Image-2026-10-06-at-5.17.54-PM.jpeg","2026/10/WhatsApp-Image-2026-10-06-at-5.17.55-PM-1.jpeg","2026/10/WhatsApp-Image-2026-10-06-at-5.17.43-PM.jpeg","2026/10/WhatsApp-Image-2026-10-06-at-5.17.44-PM.jpeg","2026/10/WhatsApp-Image-2026-10-06-at-5.17.44-PM-1.jpeg"]],["RENAULT DUSTER 1.6 4X2 PRIVILEGE 2015","renault-duster-1-6-4x2-privilege-2015",18000000,"ARS","2015","170000","SUV","Manual","NEGRO","Usado","Nafta","1.6","Renault",["2026/10/WhatsApp-Image-2026-10-06-at-12.49.15-PM.jpeg","2026/10/WhatsApp-Image-2026-10-06-at-12.49.17-PM.jpeg","2026/10/WhatsApp-Image-2026-10-06-at-12.49.16-PM.jpeg","2026/10/WhatsApp-Image-2026-10-06-at-12.49.19-PM.jpeg","2026/10/WhatsApp-Image-2026-10-06-at-12.49.19-PM-1.jpeg","2026/10/WhatsApp-Image-2026-10-06-at-12.49.20-PM.jpeg","2026/10/WhatsApp-Image-2026-10-06-at-12.49.18-PM.jpeg","2026/10/WhatsApp-Image-2026-10-06-at-12.49.18-PM-1.jpeg","2026/10/WhatsApp-Image-2026-10-06-at-12.49.35-PM.jpeg","2026/10/WhatsApp-Image-2026-10-06-at-12.49.22-PM-1.jpeg"]],["KIA RIO SX 1.6 AT 2022","kia-rio-sx-1-6-at-2022",31200000,"ARS","2022","58600","Hatchback","Automática","GRIS PLATA","Usado","Nafta","1.6","KIA",["2026/10/AF068UL-28.jpeg","2026/10/AF068UL-30.jpeg","2026/10/AF068UL-29.jpeg","2026/10/AF068UL-31.jpeg","2026/10/AF068UL-32.jpeg","2026/10/AF068UL-12.jpeg","2026/10/AF068UL-13.jpeg","2026/10/AF068UL-15.jpeg","2026/10/AF068UL-10.jpeg","2026/10/AF068UL-20.jpeg"]],["CHANGAN EADO 1.5 PLUS PHEV 2026 0KM","changan-eado-plus-phev-2026-0km",30900,"USD","2026","0","Chinos/Sedan","Automática","GRIS PLATA","Nuevo","HIBRIDO","1.5","Changan",["2026/10/WhatsApp-Image-2026-10-01-at-12.24.25-PM.jpeg","2026/10/WhatsApp-Image-2026-10-01-at-12.24.26-PM-1.jpeg","2026/10/WhatsApp-Image-2026-10-01-at-12.24.26-PM.jpeg","2026/10/WhatsApp-Image-2026-10-01-at-12.24.27-PM-1.jpeg","2026/10/WhatsApp-Image-2026-10-01-at-12.24.28-PM.jpeg","2026/10/WhatsApp-Image-2026-10-01-at-12.24.29-PM-1.jpeg","2026/10/WhatsApp-Image-2026-10-01-at-12.24.30-PM-1.jpeg","2026/10/WhatsApp-Image-2026-10-01-at-12.24.30-PM.jpeg","2026/10/WhatsApp-Image-2026-10-01-at-12.24.31-PM.jpeg","2026/10/WhatsApp-Image-2026-10-01-at-12.24.32-PM-2.jpeg"]],["NISSAN KICKS 1.6 EXCLUSIVE CVT 2020","nissan-kicks-1-6-exclusive-cvt-2020",27500000,"ARS","2020","138000","SUV","Automática","BLANCO","Usado","Nafta","1.6","Nissan",["2026/10/WhatsApp-Image-2026-10-01-at-5.07.42-PM-1.jpeg","2026/10/WhatsApp-Image-2026-10-01-at-5.07.42-PM-2.jpeg","2026/10/WhatsApp-Image-2026-10-01-at-5.07.43-PM.jpeg","2026/10/WhatsApp-Image-2026-10-01-at-5.07.43-PM-1.jpeg","2026/10/WhatsApp-Image-2026-10-01-at-5.07.43-PM-2.jpeg","2026/10/WhatsApp-Image-2026-10-01-at-5.07.44-PM-1.jpeg","2026/10/WhatsApp-Image-2026-10-01-at-5.07.44-PM-2.jpeg","2026/10/WhatsApp-Image-2026-10-01-at-5.07.44-PM.jpeg","2026/10/WhatsApp-Image-2026-10-01-at-5.07.50-PM-1.jpeg","2026/10/WhatsApp-Image-2026-10-01-at-5.07.48-PM-1.jpeg"]],["DS7 CROSSBACK E-TENSE 4X4 AT 300 BASTILLE+ 2023","ds7-crossback-e-tense-4x4-at-300-bastille",35000,"USD","2023","84500","SUV","Automática","GRIS PLATA","Usado","HIBRIDO","1.6","DS",["2026/10/WhatsApp-Image-2026-10-01-at-5.50.12-PM.jpeg","2026/10/WhatsApp-Image-2026-10-01-at-5.50.13-PM-1.jpeg","2026/10/WhatsApp-Image-2026-10-01-at-5.50.13-PM.jpeg","2026/10/WhatsApp-Image-2026-10-01-at-5.50.14-PM.jpeg","2026/10/WhatsApp-Image-2026-10-01-at-5.50.13-PM-2.jpeg","2026/10/WhatsApp-Image-2026-10-01-at-5.50.14-PM-1.jpeg","2026/10/WhatsApp-Image-2026-10-01-at-5.50.15-PM.jpeg","2026/10/WhatsApp-Image-2026-10-01-at-5.50.14-PM-2.jpeg","2026/10/WhatsApp-Image-2026-10-01-at-5.50.17-PM-1.jpeg","2026/10/WhatsApp-Image-2026-10-01-at-5.50.15-PM-1.jpeg"]],["PEUGEOT 308 FELINE 1.6 THP TIPTRONIC 2017","peugeot-308-feline-1-6-thp-tiptronic-2017",17000000,"ARS","2017","116000","Hatchback","Automática","BLANCO","Usado","Nafta","1.6","Peugeot",["2026/10/WhatsApp-Image-2026-10-01-at-10.46.51-AM-1.jpeg","2026/10/WhatsApp-Image-2026-10-01-at-10.46.53-AM.jpeg","2026/10/WhatsApp-Image-2026-10-01-at-10.46.52-AM-2.jpeg","2026/10/WhatsApp-Image-2026-10-01-at-10.46.54-AM-1.jpeg","2026/10/WhatsApp-Image-2026-10-01-at-10.46.53-AM-1.jpeg","2026/10/WhatsApp-Image-2026-10-01-at-10.46.54-AM-2.jpeg","2026/10/WhatsApp-Image-2026-10-01-at-10.46.55-AM-1.jpeg","2026/10/WhatsApp-Image-2026-10-01-at-10.46.55-AM.jpeg","2026/10/WhatsApp-Image-2026-10-01-at-10.47.00-AM.jpeg","2026/10/WhatsApp-Image-2026-10-01-at-10.46.59-AM.jpeg"]],["VOLKSWAGEN GOLF 1.6 TRENDLINE MT 2016","volkswagen-golf-1-6-trendline-mt-2016",23000000,"ARS","2016","137000","Hatchback","Manual","BLANCO","Usado","Nafta","1.6","Volkswagen",["2026/09/WhatsApp-Image-2026-09-29-at-12.19.35-PM.jpeg","2026/09/WhatsApp-Image-2026-09-29-at-12.19.39-PM.jpeg","2026/09/WhatsApp-Image-2026-09-29-at-12.19.37-PM.jpeg","2026/09/WhatsApp-Image-2026-09-29-at-12.19.38-PM.jpeg","2026/09/WhatsApp-Image-2026-09-29-at-12.19.40-PM.jpeg","2026/09/WhatsApp-Image-2026-09-29-at-12.19.51-PM.jpeg","2026/09/WhatsApp-Image-2026-09-29-at-12.19.52-PM.jpeg","2026/09/WhatsApp-Image-2026-09-29-at-12.19.53-PM.jpeg","2026/09/WhatsApp-Image-2026-09-29-at-12.19.49-PM.jpeg","2026/09/WhatsApp-Image-2026-09-29-at-12.19.48-PM.jpeg"]],["JAC S3 1.6 INTELLIGENT CVT 2020","jac-s3-inteligent-cvt-2020",19800000,"ARS","2020","75000","","","GRIS PLATA","Usado","Nafta","1.6","JAC",["2026/09/WhatsApp-Image-2026-09-24-at-6.04.14-PM.jpeg","2026/09/WhatsApp-Image-2026-09-24-at-6.04.18-PM-1.jpeg","2026/09/WhatsApp-Image-2026-09-24-at-6.04.16-PM-1.jpeg","2026/09/WhatsApp-Image-2026-09-24-at-6.04.19-PM.jpeg","2026/09/WhatsApp-Image-2026-09-24-at-6.05.32-PM-scaled.jpeg","2026/09/WhatsApp-Image-2026-09-24-at-6.04.29-PM-1.jpeg","2026/09/WhatsApp-Image-2026-09-24-at-6.04.27-PM.jpeg","2026/09/WhatsApp-Image-2026-09-24-at-6.04.28-PM.jpeg","2026/09/WhatsApp-Image-2026-09-24-at-6.04.20-PM.jpeg","2026/09/WhatsApp-Image-2026-09-24-at-6.04.30-PM.jpeg"]],["JMEV EASY 3 100% ELÉCTRICO 0km!","jmev-easy-3-100-electrico",18900,"USD","2026","0","Chinos/Hatchback","Automática","CELESTE","Nuevo","Eléctrico","","JMEV",["2026/09/EASY-3-2.jpeg","2026/09/EASY-3-3.jpeg","2026/09/EASY-3-5.jpeg","2026/09/EASY-3-9.jpeg","2026/09/EASY-3-10.jpeg","2026/09/EASY-3-11.jpeg","2026/09/EASY-3-13.jpeg","2026/09/EASY-3-12.jpeg","2026/09/EASY-3-14.jpeg","2026/09/EASY-3-29.jpeg"]],["MERCEDES-BENZ VITO 1.6 111 CDI FURGON V1 2020","mercedes-benz-vito-1-6-111-cdi-furgon-v1-2020",37000000,"ARS","2020","239000","Furgon/Utilitarios","Manual","BLANCO","Usado","Diesel","1.6","Mercedes Benz",["2026/09/WhatsApp-Image-2026-09-21-at-5.59.52-PM.jpeg","2026/09/WhatsApp-Image-2026-09-21-at-5.59.53-PM-1.jpeg","2026/09/WhatsApp-Image-2026-09-21-at-5.59.53-PM.jpeg","2026/09/WhatsApp-Image-2026-09-21-at-5.59.54-PM.jpeg","2026/09/WhatsApp-Image-2026-09-21-at-5.59.54-PM-1.jpeg","2026/09/WhatsApp-Image-2026-09-21-at-5.59.55-PM-1.jpeg","2026/09/WhatsApp-Image-2026-09-21-at-5.59.55-PM.jpeg","2026/09/WhatsApp-Image-2026-09-21-at-6.04.08-PM.jpeg","2026/09/WhatsApp-Image-2026-09-21-at-6.04.08-PM-1.jpeg","2026/09/WhatsApp-Image-2026-09-21-at-6.04.11-PM.jpeg"]],["FIAT PALIO FIRE 1.4 2016","fiat-palio-fire-1-4-2016",11700000,"ARS","2016","120000","Hatchback","Manual","GRIS ACERO","Usado","Nafta","1.4","Fiat",["2026/09/FIAT-PALIO-19.jpeg","2026/09/FIAT-PALIO-1.jpeg","2026/09/FIAT-PALIO-3.jpeg","2026/09/FIAT-PALIO-4.jpeg","2026/09/FIAT-PALIO-8.jpeg","2026/09/FIAT-PALIO-5.jpeg","2026/09/FIAT-PALIO-6.jpeg","2026/09/FIAT-PALIO-9.jpeg","2026/09/FIAT-PALIO-10.jpeg","2026/09/FIAT-PALIO-11.jpeg"]],["FORD NUEVA RANGER DC 4X2 XLS 3.2L D 2017","ford-nueva-ranger-dc-4x2-xls-3-2l-d-2017",31800000,"ARS","2017","238000","Pick-Up","Manual","BLANCO","Usado","Diesel","3.2D","Ford",["2026/09/WhatsApp-Image-2026-09-18-at-6.39.11-PM-3.jpeg","2026/09/WhatsApp-Image-2026-09-18-at-6.39.10-PM.jpeg","2026/09/WhatsApp-Image-2026-09-18-at-6.39.11-PM-1.jpeg","2026/09/WhatsApp-Image-2026-09-18-at-6.39.11-PM.jpeg","2026/09/WhatsApp-Image-2026-09-18-at-6.39.11-PM-2.jpeg","2026/09/WhatsApp-Image-2026-09-18-at-6.39.14-PM-1.jpeg","2026/09/WhatsApp-Image-2026-09-18-at-6.39.14-PM.jpeg","2026/09/WhatsApp-Image-2026-09-18-at-6.39.13-PM-3.jpeg","2026/09/WhatsApp-Image-2026-09-18-at-6.39.15-PM-1.jpeg","2026/09/WhatsApp-Image-2026-09-18-at-6.39.15-PM-2.jpeg"]],["TOYOTA SW4 TDI GR-S AUT 2026 0KM","toyota-sw4-tdi-gr-s-aut-2026-0km",90500000,"ARS","2026","0","SUV","Automática","NEGRO","Nuevo","Diesel","","TOYOTA",["2026/09/TOYOTA-SW4-GR-2.jpeg","2026/09/TOYOTA-SW4-GR-1.jpeg","2026/09/TOYOTA-SW4-GR-3.jpeg","2026/09/TOYOTA-SW4-GR-4.jpeg","2026/09/TOYOTA-SW4-GR-5.jpeg","2026/09/TOYOTA-SW4-GR-7.jpeg","2026/09/TOYOTA-SW4-GR-6.jpeg","2026/09/TOYOTA-SW4-GR-8.jpeg","2026/09/TOYOTA-SW4-GR-10.jpeg","2026/09/TOYOTA-SW4-GR-9.jpeg"]],["NISSAN SENTRA 1.8 ADVANCE PURE DRIVE 2018","nissan-sentra-1-8-advance-pure-drive-2018",19000000,"ARS","2018","155000","Sedan","Manual","GRIS ACERO","Usado","Nafta","1.8","Nissan",["2026/09/AD117FR_01-scaled.jpg","2026/09/AD117FR_04-scaled.jpg","2026/09/AD117FR_03-scaled.jpg","2026/09/AD117FR_05-scaled.jpg","2026/09/AD117FR_06-scaled.jpg","2026/09/AD117FR_14-scaled.jpg","2026/09/AD117FR_10-scaled.jpg","2026/09/AD117FR_13-scaled.jpg","2026/09/AD117FR_15-scaled.jpg","2026/09/AD117FR_17-scaled.jpg"]],["RENUALT KWID 1.0 ICONIC BITONO 2026 0KM","renualt-kwid-1-0-iconic-bitono-2026-0km",25000000,"ARS","2026","0","Hatchback","Manual","","Nuevo","Nafta","","Renault",["2026/09/WhatsApp-Image-2026-09-09-at-12.04.57-PM.jpeg","2026/09/WhatsApp-Image-2026-09-09-at-12.04.59-PM-1.jpeg","2026/09/WhatsApp-Image-2026-09-09-at-12.04.58-PM-1.jpeg","2026/09/WhatsApp-Image-2026-09-09-at-12.04.59-PM.jpeg","2026/09/WhatsApp-Image-2026-09-09-at-12.04.58-PM-2.jpeg","2026/09/WhatsApp-Image-2026-09-09-at-12.05.05-PM.jpeg","2026/09/WhatsApp-Image-2026-09-09-at-12.05.04-PM.jpeg","2026/09/WhatsApp-Image-2026-09-09-at-12.05.04-PM-1.jpeg","2026/09/WhatsApp-Image-2026-09-09-at-12.05.06-PM-2.jpeg","2026/09/WhatsApp-Image-2026-09-09-at-12.05.06-PM-1.jpeg"]],["RENAULT KARDIAN ICONIC EDITION 200 EDC 2026","renault-kardian-iconic-edition-200-edc-2",39500000,"ARS","2026","","SUV","Automática","AZUL","Nuevo","Nafta","1.0","Renault",["2026/04/WhatsApp-Image-2026-06-26-at-5.49.28-PM.jpeg","2026/04/WhatsApp-Image-2026-06-26-at-5.49.27-PM.jpeg","2026/04/WhatsApp-Image-2026-06-26-at-5.49.28-PM-3.jpeg","2026/04/WhatsApp-Image-2026-06-26-at-5.49.26-PM-1.jpeg","2026/04/WhatsApp-Image-2026-06-26-at-5.49.30-PM-1.jpeg","2026/04/WhatsApp-Image-2026-06-26-at-5.49.28-PM-2.jpeg","2026/04/WhatsApp-Image-2026-06-26-at-5.49.25-PM-1.jpeg","2026/04/WhatsApp-Image-2026-06-26-at-5.49.30-PM.jpeg","2026/04/WhatsApp-Image-2026-06-26-at-5.49.25-PM.jpeg","2026/04/WhatsApp-Image-2026-06-26-at-5.49.27-PM-2.jpeg"]],["CHEVROLET AVEO LS 1.6N 2011","chevrolet-aveo-ls-1-6n-2011",11000000,"ARS","2011","178000","Sedan","Manual","GRIS OSCURO","Usado","Nafta (GNC)","1.6","Chevrolet",["2026/09/WhatsApp-Image-2026-09-08-at-5.51.35-PM.jpeg","2026/09/WhatsApp-Image-2026-09-08-at-5.51.29-PM-1.jpeg","2026/09/WhatsApp-Image-2026-09-08-at-5.51.30-PM.jpeg","2026/09/WhatsApp-Image-2026-09-08-at-5.51.32-PM.jpeg","2026/09/WhatsApp-Image-2026-09-08-at-5.51.31-PM.jpeg","2026/09/WhatsApp-Image-2026-09-08-at-5.51.43-PM.jpeg","2026/09/WhatsApp-Image-2026-09-08-at-5.51.42-PM.jpeg","2026/09/WhatsApp-Image-2026-09-08-at-5.51.40-PM.jpeg","2026/09/WhatsApp-Image-2026-09-08-at-5.51.41-PM.jpeg","2026/09/WhatsApp-Image-2026-09-08-at-5.51.33-PM.jpeg"]],["PEUGEOT 207 COMPACT XT 1.9D 5P 2010","peugeot-207-compact-xt-1-9d-5p-2010",10500000,"ARS","2010","137000","Hatchback","Manual","NEGRO","Usado","Diesel","1.9","Peugeot",["2026/09/IMG_4036-scaled.jpg","2026/09/IMG_4037-scaled.jpg","2026/09/IMG_4035-scaled.jpg","2026/09/IMG_4051-scaled.jpg","2026/09/IMG_4049-scaled.jpg","2026/09/IMG_4050-scaled.jpg","2026/09/IMG_4040-scaled.jpg","2026/09/IMG_4041-scaled.jpg","2026/09/IMG_4042-scaled.jpg","2026/09/IMG_4043-scaled.jpg"]],["PEUGEOT PARTNER PATAGONICA VTC PLUS 1.6 HDI 2021","peugeot-partner-patagonica-vtc-plus-1-6-hdi-2021",23000000,"ARS","2021","87000","Familiar","Manual","NEGRO","Usado","Diesel","1.6","Peugeot",["2026/09/WhatsApp-Image-2026-09-07-at-1.22.03-PM-1.jpeg","2026/09/WhatsApp-Image-2026-09-07-at-1.22.04-PM-2.jpeg","2026/09/WhatsApp-Image-2026-09-07-at-1.22.03-PM-2.jpeg","2026/09/WhatsApp-Image-2026-09-07-at-1.22.04-PM.jpeg","2026/09/WhatsApp-Image-2026-09-07-at-1.22.05-PM.jpeg","2026/09/WhatsApp-Image-2026-09-07-at-1.22.05-PM-1.jpeg","2026/09/WhatsApp-Image-2026-09-07-at-1.22.05-PM-2.jpeg","2026/09/WhatsApp-Image-2026-09-07-at-1.22.17-PM-2.jpeg","2026/09/WhatsApp-Image-2026-09-07-at-1.22.17-PM.jpeg","2026/09/WhatsApp-Image-2026-09-07-at-1.22.06-PM-1.jpeg"]],["FORD RANGER DC 4X4 XLT 3.2D MT 2013","ford-ranger-dc-4x4-xlt-3-2d-mt-2013",25500000,"ARS","2013","202.000","Pick-Up","Manual","CHAMPAGNE","Usado","Diesel","3.2D","Ford",["2026/09/WhatsApp-Image-2026-09-03-at-4.58.02-PM.jpeg","2026/09/WhatsApp-Image-2026-09-03-at-4.58.04-PM.jpeg","2026/09/WhatsApp-Image-2026-09-03-at-4.58.06-PM.jpeg","2026/09/WhatsApp-Image-2026-09-03-at-4.58.17-PM.jpeg","2026/09/WhatsApp-Image-2026-09-03-at-4.58.09-PM.jpeg","2026/09/WhatsApp-Image-2026-09-03-at-4.58.08-PM.jpeg","2026/09/WhatsApp-Image-2026-09-03-at-4.58.10-PM-1.jpeg","2026/09/WhatsApp-Image-2026-09-03-at-4.58.14-PM.jpeg","2026/09/WhatsApp-Image-2026-09-03-at-4.58.13-PM.jpeg","2026/09/WhatsApp-Image-2026-09-03-at-4.58.11-PM.jpeg"]],["DODGE RAM 1500 5.7 V8 LARAMIE 4X4 2015","36825",29800,"USD","2015","120000","Pick-Up","Automática","NEGRO","Usado","Nafta","5.7","DODGE",["2026/09/DODGE-RAM-OQX427-5-1.jpeg","2026/09/DODGE-RAM-OQX427-3.jpeg","2026/09/DODGE-RAM-OQX427-4.jpeg","2026/09/DODGE-RAM-OQX427-26.jpeg","2026/09/DODGE-RAM-OQX427-8.jpeg","2026/09/DODGE-RAM-OQX427-9.jpeg","2026/09/DODGE-RAM-OQX427-11.jpeg","2026/09/DODGE-RAM-OQX427-10.jpeg","2026/09/DODGE-RAM-OQX427-12.jpeg","2026/09/DODGE-RAM-OQX427-15.jpeg"]],["RENAULT SANDERO PH2 LIFE 1.6 2022","renault-sandero-ph2-life-1-6-2022",19500000,"ARS","2022","120000","Hatchback","Manual","BLANCO","Usado","Nafta","1.6","Renault",["2026/08/AF458MO-2.jpeg","2026/08/AF458MO-3.jpeg","2026/08/AF458MO-4.jpeg","2026/08/AF458MO-5.jpeg","2026/08/AF458MO-6.jpeg","2026/08/AF458MO-8.jpeg","2026/08/AF458MO-7.jpeg","2026/08/AF458MO-10.jpeg","2026/08/AF458MO-11.jpeg","2026/08/AF458MO-12.jpeg"]],["TOYOTA COROLLA CROSS SEG HEV 1.8 ECVT 2022","toyota-corolla-cross-seg-hev-1-8-ecvt-2022",42900000,"ARS","2022","34000","SUV","Automática","AZUL","Usado","HIBRIDO","1.8","TOYOTA",["2026/08/AF409PN_02-scaled.jpg","2026/08/AF409PN_01-scaled.jpg","2026/08/AF409PN_03-scaled.jpg","2026/08/AF409PN_05-scaled.jpg","2026/08/AF409PN_04-scaled.jpg","2026/08/AF409PN_07-scaled.jpg","2026/08/AF409PN_08-scaled.jpg","2026/08/AF409PN_06-scaled.jpg","2026/08/AF409PN_09-scaled.jpg","2026/08/AF409PN_10-scaled.jpg"]],["JEEP COMPASS LONGITUDE 1.3T AT6 4X2 2023","jeep-compass-longitude-1-3t-at6-4x2-2023",28500,"USD","2023","66000","SUV","Automática","NEGRO","Usado","Nafta","1.3","Jeep",["2026/08/WhatsApp-Image-2026-08-14-at-3.57.00-PM.jpeg","2026/08/WhatsApp-Image-2026-08-14-at-3.56.58-PM-1.jpeg","2026/08/WhatsApp-Image-2026-08-14-at-3.56.59-PM.jpeg","2026/08/WhatsApp-Image-2026-08-14-at-3.57.08-PM-2.jpeg","2026/08/WhatsApp-Image-2026-08-14-at-3.57.09-PM.jpeg","2026/08/WhatsApp-Image-2026-08-14-at-3.57.08-PM-1.jpeg","2026/08/WhatsApp-Image-2026-08-14-at-3.57.03-PM.jpeg","2026/08/WhatsApp-Image-2026-08-14-at-3.57.00-PM-1.jpeg","2026/08/WhatsApp-Image-2026-08-14-at-3.57.04-PM-1.jpeg","2026/08/WhatsApp-Image-2026-08-14-at-3.57.04-PM-2.jpeg"]],["TOYOTA SW4 4X4 SRX 2.8 TDI AT6 7ASIENTOS 2019","toyota-sw4-4x4-srx-2-8-tdi-at6-7asientos-2019",55000000,"ARS","2019","145000","SUV","Automática","GRIS OSCURO","Usado","Diesel","2.8","TOYOTA",["2026/08/AD488MF_02-scaled.jpg","2026/08/AD488MF_03-scaled.jpg","2026/08/AD488MF_04-scaled.jpg","2026/08/AD488MF_05-scaled.jpg","2026/08/AD488MF_06-scaled.jpg","2026/08/AD488MF_07-scaled.jpg","2026/08/AD488MF_08-scaled.jpg","2026/08/AD488MF_01-scaled.jpg","2026/08/AD488MF_14-scaled.jpg","2026/08/AD488MF_18-scaled.jpg"]],["FIAT CRONOS DRIVE 1.3 MT 2020","fiat-cronos-drive-1-3-mt-2020-2",20500000,"ARS","2020","130000","Sedan","Manual","BLANCO","Usado","Nafta","1.3","Fiat",["2026/08/AE383PH_02-scaled.jpg","2026/08/AE383PH_03-scaled.jpg","2026/08/AE383PH_04-scaled.jpg","2026/08/AE383PH_05-scaled.jpg","2026/08/AE383PH_08-1-scaled.jpg","2026/08/AE383PH_09-scaled.jpg","2026/08/AE383PH_01-scaled.jpg","2026/08/AE383PH_07-scaled.jpg","2026/08/AE383PH_06-scaled.jpg","2026/08/AE383PH_15-scaled.jpg"]],["TOYOTA COROLLA CROSS XLI 2.0 CVT 2023","toyota-corolla-cross-xli-2-0-cvt-2023",39800000,"ARS","2023","49000","SUV","Automática","GRIS OSCURO","Usado","Nafta","2.0","TOYOTA",["2026/08/WhatsApp-Image-2026-08-12-at-16.37.49-1.jpeg","2026/08/WhatsApp-Image-2026-08-12-at-16.37.49-2.jpeg","2026/08/WhatsApp-Image-2026-08-12-at-16.37.49.jpeg","2026/08/cf8f0abb-3f25-4111-a5f3-b7c3488db7da.jpg","2026/08/WhatsApp-Image-2026-08-12-at-16.37.50-1.jpeg","2026/08/WhatsApp-Image-2026-08-12-at-16.37.50-2.jpeg","2026/08/WhatsApp-Image-2026-08-12-at-16.37.51.jpeg","2026/08/WhatsApp-Image-2026-08-12-at-16.37.51-1.jpeg","2026/08/WhatsApp-Image-2026-08-12-at-16.37.52-2.jpeg","2026/08/WhatsApp-Image-2026-08-12-at-16.37.58.jpeg"]],["SHINERAY X30L FAMILIAR 1.5 NAFTA (7 PASAJEROS) 0KM","shineray-x30l-familiar-1-5-nafta-7-pasajeros",25650,"USD","2026","0","Familiar","Manual","BLANCO","Nuevo","Nafta","1.5","SHINERAY",["2026/08/SHINERAY-X30-NAFTA-2-1-scaled.jpeg","2026/08/SHINERAY-X30-NAFTA-6-1-scaled.jpeg","2026/08/SHINERAY-X30-NAFTA-5-1-scaled.jpeg","2026/08/SHINERAY-X30-NAFTA-3-1-scaled.jpeg","2026/08/SHINERAY-X30-NAFTA-1-1-scaled.jpeg","2026/08/SHINERAY-X30-NAFTA-4-1-scaled.jpeg","2026/08/SHINERAY-X30-NAFTA-10-1-scaled.jpeg","2026/08/SHINERAY-X30-NAFTA-8-1-scaled.jpeg","2026/08/SHINERAY-X30-NAFTA-9-1-scaled.jpeg","2026/08/SHINERAY-X30-NAFTA-11-1-scaled.jpeg"]],["DOMY K1 1.5 MT CABINA SIMPLE 0KM 2026","domy-victory-k1-1-5-nafta-mt-cabina-simple",16900,"USD","2026","","Utilitarios","Manual","BLANCO","Nuevo","Nafta","1.5","DOMY",["2026/08/DOMY-K1.jpg","2026/08/K1-ATRAs.jpg","2026/08/IMG-20250813-WA0063.jpg","2026/08/IMG-20250813-WA0064.jpg","2026/08/IMG-20250813-WA0065.jpg","2026/08/IMG-20250813-WA0066.jpg"]],["SHINERAY M7 PASAJEROS 11 2.0 NAFTA","shineray-m7-pasajeros-11-2-0-nafta",29700,"USD","2026","0","Familiar","Manual","BLANCO","Nuevo","Nafta","2.0L","SHINERAY",["2026/07/DSC_3516b-scaled.jpg","2026/07/DSC_3501-scaled.jpg","2026/07/DSC_3559-scaled.jpg","2026/07/DSC_3519b.jpg","2026/07/DSC_3598-scaled.jpg","2026/07/DSC_3595.jpg","2026/07/DSC_3558.jpg","2026/07/DSC_3566-scaled.jpg","2026/07/DSC_3562-scaled.jpg","2026/07/DSC_3549-scaled.jpg"]],["RENAULT LOGAN PRIVILEGE 1.6N 16V MT 2015","renault-logan-privilege-1-6n-16v-mt",16500000,"ARS","2015","90700","Sedan","Manual","GRIS PLATA","Usado","Nafta","1.6","",["2026/07/OYE142_03-scaled.jpg","2026/07/OYE142_01-scaled.jpg","2026/07/OYE142_02-scaled.jpg","2026/07/OYE142_04-scaled.jpg","2026/07/OYE142_09-scaled.jpg","2026/07/OYE142_05-scaled.jpg","2026/07/OYE142_07-scaled.jpg","2026/07/OYE142_08-scaled.jpg","2026/07/OYE142_06-scaled.jpg","2026/07/OYE142_10-scaled.jpg"]],["T50 1.6 CH BOX REFRIGERADO","t50-1-6-ch-box-refrigerado",35600,"USD","2026","","Utilitarios","Manual","BLANCO","Nuevo","Nafta","1.6N","SHINERAY",["2026/06/DSC_3791b-scaled.jpg","2026/06/DSC_3745-scaled.jpg","2026/06/DSC_3733-scaled.jpg","2026/06/DSC_3739.jpg","2026/06/DSC_3741-scaled.jpg","2026/06/DSC_3747.jpg","2026/06/DSC_3750b.jpg","2026/06/DSC_3771.jpg","2026/06/DSC_3769.jpg","2026/06/DSC_3753-scaled.jpg"]],["SHINERAY T52 1.6 C/D 2026","shineray-t52-1-6-c-d-2026",24500,"USD","2026","0","Utilitarios","Manual","BLANCO","Nuevo","Nafta","","",["2026/06/DSC_4170-scaled.jpg","2026/06/DSC_4147-1-scaled.jpg","2026/06/DSC_4154-scaled.jpg","2026/06/DSC_4160-1-scaled.jpg","2026/06/DSC_4164-scaled.jpg","2026/06/DSC_4170-1-scaled.jpg","2026/06/DSC_4172-scaled.jpg","2026/06/DSC_4175-1.jpg","2026/06/DSC_4181b-1.jpg","2026/06/DSC_4185-1-scaled.jpg"]],["SHINERAY T32 1.6 C/D 2026","shineray-t32-1-6-c-d-2026",21000,"USD","2026","","Utilitarios","Manual","BLANCO","","Nafta","1.6","SHINERAY",["2026/06/DSC_5782-scaled.jpg","2026/06/DSC_5783.jpg","2026/06/DSC_5790-scaled.jpg","2026/06/DSC_5796-scaled.jpg","2026/06/DSC_5803-scaled.jpg","2026/06/DSC_5805.jpg","2026/06/DSC_5807-scaled.jpg","2026/06/DSC_5812.jpg","2026/06/DSC_5821.jpg","2026/06/DSC_5822.jpg"]],["SHINERAY M7 FURGON 5 PASAJEROS 2.0 NAFTA 0Km 2026","shineray-m7-5-pasajeros-2-0-nafta-manual-0km-2026",24750,"USD","2026","0","Furgon/Utilitarios","Manual","BLANCO","Nuevo","Nafta","2.0","SHINERAY",["2026/06/SHINERAY-M7-MIXTO-5-ASIENTOS-2.jpeg","2026/06/m7-roja-5as.png","2026/06/SHINERAY-M7-MIXTO-5-ASIENTOS-39.jpeg","2026/06/SHINERAY-M7-MIXTO-5-ASIENTOS-10.jpeg","2026/06/SHINERAY-M7-MIXTO-5-ASIENTOS-14.jpeg","2026/06/SHINERAY-M7-MIXTO-5-ASIENTOS-19.jpeg","2026/06/SHINERAY-M7-MIXTO-5-ASIENTOS-18.jpeg","2026/06/SHINERAY-M7-MIXTO-5-ASIENTOS-33.jpeg","2026/06/SHINERAY-M7-MIXTO-5-ASIENTOS-26.jpeg","2026/06/SHINERAY-M7-MIXTO-5-ASIENTOS-35.jpeg"]],["CITROEN C3 FEEL MT 0km","citroen-c3-1-6n-vti-feel-mt",0,"ARS","2026","0","Hatchback","Manual","BLANCO","Nuevo","Nafta","1.6N","",["2026/05/0KM_02-scaled.jpg","2026/05/0KM_01-scaled.jpg","2026/05/0KM_04-scaled.jpg","2026/05/0KM_03-scaled.jpg","2026/05/0KM_05-scaled.jpg","2026/05/0KM_06-scaled.jpg","2026/05/0KM_07-scaled.jpg","2026/05/0KM_08-scaled.jpg","2026/05/0KM_12-scaled.jpg","2026/05/0KM_191-scaled.jpg"]],["FIAT STRADA 1.3 VOLCANO CVT 2026","fiat-strada-1-3-volcano-cvt",37500000,"ARS","2026","6500","Pick-Up","","ROJO","Usado","Nafta","1.3","",["2026/05/WhatsApp-Image-2026-05-14-at-4.06.19-PM-1.jpeg","2026/05/WhatsApp-Image-2026-05-14-at-4.06.19-PM.jpeg","2026/05/WhatsApp-Image-2026-05-14-at-4.06.20-PM-1.jpeg","2026/05/WhatsApp-Image-2026-05-14-at-4.06.20-PM-2.jpeg","2026/05/WhatsApp-Image-2026-05-14-at-4.06.20-PM.jpeg","2026/05/WhatsApp-Image-2026-05-14-at-4.06.21-PM-1.jpeg","2026/05/WhatsApp-Image-2026-05-14-at-4.06.21-PM.jpeg","2026/05/WhatsApp-Image-2026-05-14-at-4.06.22-PM-1.jpeg","2026/05/WhatsApp-Image-2026-05-14-at-4.06.22-PM.jpeg","2026/05/WhatsApp-Image-2026-05-14-at-4.06.23-PM-1.jpeg"]],["VOLKSWAGEN T-CROSS 170TSI MT 2023","volkswagen-t-cross-170tsi-mt",30500000,"ARS","2023","53000","SUV","Manual","GRIS","Usado","Nafta","1.0T","Volkswagen",["2026/05/AG375MP_17-scaled.jpg","2026/05/AG375MP_15-scaled.jpg","2026/05/AG375MP_16-scaled.jpg","2026/05/AG375MP_01-scaled.jpg","2026/05/AG375MP_02-scaled.jpg","2026/05/AG375MP_04-scaled.jpg","2026/05/AG375MP_18-scaled.jpg","2026/05/AG375MP_19-scaled.jpg","2026/05/AG375MP_06-scaled.jpg","2026/05/AG375MP_10-scaled.jpg"]],["HYUNDAI H1 2.5D FULL 12 PASAJEROS AT 2016","hyundai-h1-2-5d-at-2016",31000,"USD","2016","163400","Furgon/Oportunidades","","GRIS TOPO","Usado","Diesel","2.5","HYUNDAI",["2026/03/PNC931_02-scaled.jpg","2026/03/PNC931_01-scaled.jpg","2026/03/PNC931_03-scaled.jpg","2026/03/PNC931_04-scaled.jpg","2026/03/PNC931_05-scaled.jpg","2026/03/PNC931_14-scaled.jpg","2026/03/PNC931_15-scaled.jpg","2026/03/PNC931_13-scaled.jpg","2026/03/PNC931_06-scaled.jpg","2026/03/PNC931_07-scaled.jpg"]],["CITROEN BASALT 1.6 VTI LIVE PACK","citroen-bassalt-1-6-vti-live-pack",0,"ARS","2026","0","SUV","Manual","GRIS PLATA","Nuevo","Nafta","1.6","",["2026/03/0KM_02_1772553038338-scaled.jpg","2026/03/0KM_03_1772553198779-scaled.jpg","2026/03/0KM_01_1772553021109-scaled.jpg","2026/03/0KM_06_1772553271145-scaled.jpg","2026/03/0KM_07_1772553283871-scaled.jpg","2026/03/0KM_05_1772553260633-scaled.jpg","2026/03/0KM_04_1772553251476-scaled.jpg","2026/03/0KM_16_1772553969142-scaled.jpg","2026/03/0KM_11_1772553664100-scaled.jpg","2026/03/0KM_12_1772553684960-scaled.jpg"]],["FIAT CRONOS 1.3","fiat-cronos-1-3",0,"ARS","2026","0","Sedan","Manual","GREY - GRIS OSCURO","Nuevo","Nafta","","Fiat",["2026/03/01-scaled.jpeg","2026/03/02-scaled.jpeg","2026/03/03-scaled.jpeg","2026/03/04-scaled.jpeg","2026/03/05-scaled.jpeg","2026/03/06-scaled.jpeg","2026/03/07-scaled.jpeg","2026/03/08-scaled.jpeg","2026/03/09-scaled.jpeg","2026/03/10-scaled.jpeg"]],["UTV &#8211; RANGER RZR XP AT 1000CC 4 PLAZAS","utv-ranger-rzr-xp-at-1000cc-4-plazas",20300,"USD","2014","4800","Hatchback","Manual","GRIS","Usado","Nafta","","Ford",["2026/01/1-scaled.jpeg","2026/01/2-scaled.jpeg","2026/01/5-scaled.jpeg","2026/01/3-scaled.jpeg","2026/01/4-scaled.jpeg","2026/01/6-scaled.jpeg","2026/01/7-scaled.jpeg","2026/01/10-1-scaled.jpeg","2026/01/11-1-scaled.jpeg","2026/01/12-1-scaled.jpeg"]],["FORD BRONCO SPORT WILDTRAK 2.0L AT 2022","ford-bronco-sport-wildtrak-2-0l-at",54000000,"ARS","2022","73500","Oportunidades/SUV","Automática","BLANCO","Usado","Nafta","","Ford",["2026/01/IMG_0637-scaled.jpg","2026/01/IMG_0638-scaled.jpg","2026/01/IMG_0636-scaled.jpg","2026/01/IMG_0643-scaled.jpg","2026/01/IMG_0639-scaled.jpg","2026/01/IMG_0640-scaled.jpg","2026/01/IMG_0641-scaled.jpg","2026/01/IMG_0642-scaled.jpg","2026/01/IMG_0646-scaled.jpg","2026/01/IMG_0648-scaled.jpg"]],["FIAT DUCATO CARGO 2.3 JDT","fiat-ducato-cargo-2-3-jdt",17000000,"ARS","2011","130000","Utilitarios","Manual","BLANCO","Usado","Diesel","","Fiat",["2026/01/01-scaled.jpeg","2026/01/02-scaled.jpeg","2026/01/03-scaled.jpeg","2026/01/04-scaled.jpeg","2026/01/05.jpeg","2026/01/06-scaled.jpeg","2026/01/07-scaled.jpeg","2026/01/08-scaled.jpeg","2026/01/09-scaled.jpeg","2026/01/10-scaled.jpeg"]],["IVECO DAILY MOTOR HOME 55C16 PASO 3750 2013","iveco-daily-55c16-paso-3750-2013",72000,"USD","2013","220000","Motorhome","Manual","GRIS OSCURO","Usado","Diesel","","Iveco",["2025/12/IMG_9449-1-scaled.jpg","2025/12/IMG_9447-scaled.jpg","2025/12/IMG_9450-scaled.jpg","2025/12/IMG_9452-scaled.jpg","2025/12/IMG_9453-scaled.jpg","2025/12/IMG_9454-scaled.jpg","2025/12/IMG_9455-scaled.jpg","2025/12/IMG_9425-scaled.jpg","2025/12/IMG_9424-scaled.jpg","2025/12/IMG_9428-scaled.jpg"]],["SHINERAY M7 FURGÓN 2.0 NAFTA MANUAL 0Km 2026","shineray-m7-furgon-2-0-nafta-manual-0km-2025",23700,"USD","2026","0","Furgon/Utilitarios","Manual","BLANCO","Nuevo","Nafta","2.0","SHINERAY",["2025/11/0KM-BLANCO_21-scaled.jpg","2025/11/0KM-BLANCO_23-scaled.jpg","2025/11/0KM-BLANCO_20-scaled.jpg","2025/11/0KM-BLANCO_02-scaled.jpg","2025/11/0KM-BLANCO_19-scaled.jpg","2025/11/0KM-BLANCO_01-scaled.jpg","2025/11/0KM-BLANCO_03-scaled.jpg","2025/11/0KM-BLANCO_04-scaled.jpg","2025/11/0KM-BLANCO_05-scaled.jpg","2025/11/0KM-BLANCO_06-scaled.jpg"]],["Volkswagen Polo track 1.6 2026","volkswagen-polo-track-1-6-2025-2",0,"ARS","2026","0","Hatchback","Manual","GRIS PLATA","Nuevo","Nafta","","",["2025/10/IMG-20250722-WA0075-scaled.jpg","2025/10/IMG-20250722-WA0085-scaled.jpg","2025/10/IMG-20250722-WA0083-scaled.jpg","2025/10/IMG-20250722-WA0091-scaled.jpg","2025/10/IMG-20250722-WA0093-scaled.jpg","2025/10/IMG-20250722-WA0095-scaled.jpg","2025/10/IMG-20250722-WA0097-scaled.jpg"]],["SHINERAY T30 1.6 C/S 2026","shineray-t30-1-6-c-s-1-5-t-2026",20100,"USD","2026","0","Utilitarios","Manual","BLANCO","Nuevo","Nafta","","SHINERAY",["2025/10/IMG-20250813-WA0233.jpg","2025/10/IMG-20250813-WA0235.jpg","2025/10/IMG-20250813-WA0232.jpg","2025/10/IMG-20250813-WA0250.jpg","2025/10/IMG-20250813-WA0251.jpg","2025/10/IMG-20250813-WA0249.jpg","2025/10/IMG-20250813-WA0248.jpg","2025/10/IMG-20250813-WA0246.jpg","2025/10/IMG-20250813-WA0247.jpg","2025/10/IMG-20250813-WA0254.jpg"]],["Renault  Kwid Iconic Outsider 1.0 2026","renault-kwid-iconic-outsider-1-0-2025",0,"ARS","2026","0","Hatchback","Manual","BLANCO","Nuevo","Nafta","","Renault",["2025/09/IMG-20250825-WA0155.jpg","2025/09/IMG-20250825-WA0153.jpg","2025/09/IMG-20250825-WA0154.jpg","2025/09/IMG-20250825-WA0156.jpg","2025/09/IMG-20250825-WA0157.jpg","2025/09/IMG-20250825-WA0158.jpg","2025/09/IMG-20250825-WA0159.jpg","2025/09/IMG-20250825-WA0160.jpg","2025/09/IMG-20250825-WA0161.jpg","2025/09/IMG-20250825-WA0162.jpg"]],["DOMY V1 1.5 FURGÓN 0KM 2026","domy-1-5-furgon-v1-2025",16900,"USD","2026","0","Utilitarios","Manual","BLANCO","Nuevo","Nafta","","DOMY",["2025/09/IMG-20250911-WA0034.jpg","2025/09/IMG-20250911-WA0033.jpg","2025/09/IMG-20250911-WA0035.jpg","2025/09/IMG-20250911-WA0040.jpg","2025/09/IMG-20250911-WA0039.jpg","2025/09/IMG-20250911-WA0036.jpg","2025/09/IMG-20250911-WA0037.jpg","2025/09/IMG-20250911-WA0038.jpg","2025/09/IMG-20250911-WA0041.jpg","2025/09/IMG-20250911-WA0042.jpg"]],["Lancha Campanili Ventura 140 HP 2000","lancha-campanili-ventura-140-hp-2000",10000,"USD","2000","0","Otros","","BLANCO","Usado","","","",["2025/08/IMG-20241031-WA0084.jpg","2025/08/IMG-20241031-WA0075.jpg","2025/08/IMG-20241031-WA0077.jpg","2025/08/IMG-20241031-WA0080.jpg","2025/08/IMG-20241031-WA0082.jpg","2025/08/IMG-20241031-WA0083.jpg","2025/08/IMG-20241031-WA0086.jpg","2025/08/IMG-20241031-WA0091.jpg","2025/08/IMG-20241031-WA0073.jpg","2025/08/IMG-20241031-WA0074.jpg"]],["RENAULT NUEVO MASTER L3H2 AA 2019","nuevo-master-l3h2-aa-2019",32500,"USD","2019","166500","Utilitarios","Manual","BLANCO","Usado","Diesel","","",["2025/08/IMG-20250804-WA0099.jpg","2025/08/IMG-20250804-WA0096.jpg","2025/08/IMG-20250804-WA0095.jpg","2025/08/IMG-20250804-WA0102.jpg","2025/08/IMG-20250804-WA0101.jpg","2025/08/IMG-20250804-WA0100.jpg","2025/08/IMG-20250804-WA0097.jpg","2025/08/IMG-20250804-WA0098.jpg","2025/08/IMG-20250804-WA0113.jpg","2025/08/IMG-20250804-WA0112.jpg"]],["208 Allure 1.6 mt 2026","208-allure-1-6-mt-2025-2",0,"ARS","2026","0","Hatchback","Manual","BLANCO","Nuevo","Nafta","","",["2025/08/IMG-20250819-WA0082-1.jpg","2025/08/IMG-20250819-WA0084-1.jpg","2025/08/IMG-20250819-WA0083-1.jpg","2025/08/IMG-20250819-WA0081-1.jpg","2025/08/IMG-20250819-WA0085-1.jpg","2025/08/IMG-20250819-WA0087-1.jpg","2025/08/IMG-20250819-WA0086-1.jpg","2025/08/IMG-20250819-WA0089-1.jpg","2025/08/IMG-20250723-WA0106.jpg","2025/08/IMG-20250723-WA0107.jpg"]],["Peugeot 208 allure mt 2026","peugeot-208-allure-mt-2025",0,"ARS","2026","0","Hatchback","Manual","AZUL","Nuevo","Nafta","","",["2025/08/IMG-20250723-WA0081.jpg","2025/08/IMG-20250723-WA0080.jpg","2025/08/IMG-20250723-WA0079.jpg","2025/08/IMG-20250723-WA0110.jpg","2025/08/IMG-20250723-WA0082.jpg","2025/08/IMG-20250723-WA0085.jpg","2025/08/IMG-20250723-WA0084.jpg","2025/08/IMG-20250723-WA0083.jpg","2025/08/IMG-20250723-WA0091.jpg","2025/08/IMG-20250723-WA0090.jpg"]],["Volkswagen Polo track 1.6 2026","volkswagen-polo-track-1-6-2025",0,"ARS","2026","0","Hatchback","Manual","BLANCO","Nuevo","Nafta","","",["2025/08/1-5-scaled-1.jpg","2025/08/2-3-scaled-1.jpg","2025/08/3-5-scaled-1.jpg","2025/08/4-5-scaled-1.jpg","2025/08/5-5-scaled-1.jpg","2025/08/6-6-scaled-1.jpg","2025/08/7-7-scaled-1.jpg","2025/08/8-8-scaled-1.jpg","2025/08/9-9-scaled-1.jpg","2025/08/10-13-scaled-1.jpg"]],["DOMY K2 1.5 CABINA DOBLE 0KM 2026","domy-k2-cabina-doble-2025",16900,"USD","2026","0","Utilitarios","Manual","BLANCO","Nuevo","Nafta","","DOMY",["2025/08/IMG-20250813-WA0052-1.jpg","2025/08/IMG-20250813-WA0023-scaled-1.jpg","2025/08/IMG-20250813-WA0022-scaled-1.jpg","2025/08/IMG-20250813-WA0020-scaled-1.jpg","2025/08/IMG-20250813-WA0021-scaled-1.jpg","2025/08/IMG-20250813-WA0024-scaled-1.jpg","2025/08/IMG-20250813-WA0018-scaled-1.jpg","2025/08/IMG-20250813-WA0019-scaled-1.jpg","2025/08/IMG-20250813-WA0010-scaled-1.jpg","2025/08/IMG-20250813-WA0009-scaled-1.jpg"]],["KIA SPORTAGE EX 2.0N 4X2 AT 2018","kia-sportage-ex-2-0n-4x2-at-2018",29500000,"ARS","2018","101000","SUV","","BLANCO","Usado","Nafta","","",["2025/08/IMG-20250813-WA0052.jpg","2025/08/IMG-20250813-WA0051.jpg","2025/08/IMG-20250813-WA0053.jpg","2025/08/IMG-20250813-WA0061.jpg","2025/08/IMG-20250813-WA0058.jpg","2025/08/IMG-20250813-WA0057.jpg","2025/08/IMG-20250813-WA0077.jpg","2025/08/IMG-20250813-WA0056.jpg","2025/08/IMG-20250813-WA0055.jpg","2025/08/IMG-20250813-WA0074.jpg"]],["208 Allure 1.6 mt 2026","208-allure-1-6-mt-2025",0,"ARS","2026","0","Hatchback","Manual","NEGRO","Nuevo","Nafta","","",["2025/08/IMG-20250722-WA0069-scaled-1.jpg","2025/08/IMG-20250722-WA0079-scaled-1.jpg","2025/08/IMG-20250722-WA0077-scaled-1.jpg","2025/08/IMG-20250722-WA0063-scaled-1.jpg","2025/08/IMG-20250722-WA0065-scaled-1.jpg","2025/08/IMG-20250722-WA0067-scaled-1.jpg","2025/08/IMG-20250722-WA0071-scaled-1.jpg","2025/08/IMG-20250722-WA0073-scaled-1.jpg"]]]</script>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+
+const $ = id => document.getElementById(id);
+const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const TOUCH = matchMedia('(hover: none) and (pointer: coarse)').matches;
+const WA = '5493515171111';
+const UP = 'https://tutuautomotores.com/wp-content/uploads/';
+const bar = p => { $('load-bar').style.width = Math.round(p * 100) + '%'; };
+try { await Promise.race([Promise.all([document.fonts.load('800 100px Archivo'), document.fonts.load('600 40px Archivo')]), new Promise(r => setTimeout(r, 2500))]); } catch (e) {}
+bar(.15);
+
+/* ---------------- datos ---------------- */
+const RAW = JSON.parse($('stock').textContent);
+const cars = RAW.map((r, i) => ({ i, name: r[0], slug: r[1], price: r[2], cur: r[3] || 'ARS', year: r[4], km: +r[5] || 0,
+  tipo: r[6] || '', trans: r[7], color: r[8], cond: r[9], fuel: r[10], motor: r[11], brand: r[12], imgs: r[13] || [] }));
+
+function bodyOf(c) {
+  const n = c.name.toUpperCase(), t = c.tipo.toUpperCase();
+  if (/LANCHA/.test(n)) return 'boat';
+  if (/MOTOR ?HOME/.test(n) || t.includes('MOTORHOME')) return 'motorhome';
+  if (/\bT50\b|REFRIGER/.test(n)) return 'boxtruck';
+  if (/\bT3[02]\b|\bT52\b|DOMY K[12]|CABINA/.test(n)) return 'minitruck';
+  if (/DUCATO|MASTER|SPRINTER|DAILY/.test(n)) return 'bigvan';
+  if (/VITO|\bH1\b|\bM7\b|\bV1\b|FURG|PARTNER|X30L|KANGOO|BERLINGO/.test(n) || t.includes('FURGON') || t.includes('FAMILIAR')) return 'van';
+  if (t.includes('PICK') || /RANGER|HILUX|AMAROK|STRADA|\bRAM\b|TORO|\bS10\b/.test(n)) return 'pickup';
+  if (t.includes('SUV')) return 'suv';
+  if (t.includes('SEDAN')) return 'sedan';
+  if (t.includes('HATCH')) return 'hatch';
+  if (/JAC S3/.test(n)) return 'suv';
+  return 'hatch';
+}
+const ZONES = [
+  { id: 'suv', label: 'SUV', bodies: ['suv'] },
+  { id: 'hatch', label: 'Hatchback', bodies: ['hatch'] },
+  { id: 'sedan', label: 'Sedán', bodies: ['sedan'] },
+  { id: 'pickup', label: 'Pick-up', bodies: ['pickup'] },
+  { id: 'util', label: 'Utilitarios', bodies: ['van', 'bigvan', 'minitruck', 'boxtruck'] },
+  { id: 'esp', label: 'Especiales', bodies: ['motorhome', 'boat'], rows: [0, 3] },
+];
+cars.forEach(c => { c.body = bodyOf(c); c.zone = ZONES.find(z => z.bodies.includes(c.body)); c.isNew = /nuevo/i.test(c.cond) || c.km === 0; c.dbl = /C\/D|DOBLE|K2/i.test(c.name); });
+
+const fmtN = n => n.toLocaleString('es-AR');
+const fmtPrice = c => c.price ? (c.cur === 'USD' ? 'U$D ' : '$ ') + fmtN(c.price) : 'Consultar';
+const img = (p, thumb) => { if (!p) return ''; if (!thumb) return UP + p; return UP + p.replace(/(\.[a-z]+)$/i, '-300x300$1'); };
+
+const PAINT = { 'BLANCO': 0xE9ECF0, 'GRIS PLATA': 0xB5BBC3, 'NEGRO': 0x16181C, 'GRIS OSCURO': 0x4A4F57, 'GREY - GRIS OSCURO': 0x4A4F57, 'AZUL': 0x1D4796,
+  'GRIS ACERO': 0x7B838D, 'GRIS': 0x8E959E, 'GRIS NARDO': 0x8C9094, 'AZUL PETROLEO': 0x1C4A57, 'BORDO': 0x681525, 'MARRÓN': 0x5A3928,
+  'CELESTE': 0x7AAED6, 'CHAMPAGNE': 0xCBB894, 'ROJO': 0xB0141C, 'GRIS TOPO': 0x6C645C };
+const paintOf = c => new THREE.Color(PAINT[(c.color || '').toUpperCase()] ?? 0xC4C9CF);
+
+/* ---------------- render ---------------- */
+const canvas = $('c');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(devicePixelRatio, TOUCH ? 1.6 : 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = .95;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0e1218);
+scene.fog = new THREE.Fog(0x0e1218, 38, 115);
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+scene.environmentIntensity = 0.9;
+
+const camera = new THREE.PerspectiveCamera(TOUCH ? 68 : 60, innerWidth / innerHeight, 0.01, 260);
+camera.rotation.order = 'YXZ';
+
+scene.add(new THREE.HemisphereLight(0xd6e2ff, 0x2a2b2e, 0.55));
+const sun = new THREE.DirectionalLight(0xffffff, .85); sun.position.set(-20, 40, 10); scene.add(sun);
+const spot = new THREE.SpotLight(0xffffff, 0, 30, 0.42, 0.55, 1.2); spot.position.set(0, 9, 0); scene.add(spot, spot.target);
+
+/* ---------------- texturas de canvas ---------------- */
+function canvasTex(w, h, draw, repeat) {
+  const cv = document.createElement('canvas'); cv.width = w; cv.height = h; const g = cv.getContext('2d'); draw(g, w, h);
+  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8;
+  if (repeat) { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(...repeat); }
+  return t;
+}
+const concreteTex = canvasTex(512, 512, (g, w, h) => {
+  g.fillStyle = '#8b8e91'; g.fillRect(0, 0, w, h);
+  for (let i = 0; i < 9000; i++) { const v = 120 + Math.random() * 40 | 0; g.fillStyle = `rgba(${v},${v},${v + 2},${Math.random() * .18})`; g.fillRect(Math.random() * w, Math.random() * h, 2, 2); }
+  for (let i = 0; i < 26; i++) { const x = Math.random() * w, y = Math.random() * h, r = 30 + Math.random() * 90; const gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, 'rgba(60,62,66,.10)'); gr.addColorStop(1, 'rgba(60,62,66,0)'); g.fillStyle = gr; g.fillRect(x - r, y - r, r * 2, r * 2); }
+  g.strokeStyle = 'rgba(40,42,46,.35)'; g.lineWidth = 2; g.strokeRect(0, 0, w, h);
+}, [24, 10]);
+const wallTex = canvasTex(256, 64, (g, w, h) => {
+  const gr = g.createLinearGradient(0, 0, w, 0);
+  for (let i = 0; i <= 8; i++) { gr.addColorStop(i / 8, i % 2 ? '#c9ced5' : '#e3e7ec'); }
+  g.fillStyle = gr; g.fillRect(0, 0, w, h);
+}, [60, 1]);
+const shadowTex = canvasTex(128, 128, (g, w, h) => {
+  const gr = g.createRadialGradient(w / 2, h / 2, 4, w / 2, h / 2, w / 2);
+  gr.addColorStop(0, 'rgba(0,0,0,.62)'); gr.addColorStop(.55, 'rgba(0,0,0,.35)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = gr; g.fillRect(0, 0, w, h);
+});
+function textTex(text, opt = {}) {
+  const { w = 1024, h = 256, size = 150, color = '#ffffff', bg = null, weight = 800, stretch = '115%', align = 'center', sub = null } = opt;
+  return canvasTex(w, h, (g) => {
+    if (bg) { g.fillStyle = bg; g.fillRect(0, 0, w, h); }
+    g.fillStyle = color; g.textAlign = align; g.textBaseline = 'middle';
+    g.font = `${weight} ${stretch === '115%' ? '' : ''}${size}px Archivo, "Arial Narrow", sans-serif`;
+    const x = align === 'center' ? w / 2 : 40;
+    g.fillText(text, x, sub ? h * .42 : h / 2);
+    if (sub) { g.font = `600 ${size * .32}px Archivo, sans-serif`; g.globalAlpha = .8; g.fillText(sub, x, h * .78); }
+  });
+}
+
+/* ---------------- tipos de carrocería ---------------- */
+// Perfil lateral: x hacia adelante (frente = +x), y hacia arriba. Unidades en metros.
+const T = {
+  hatch:   { L: 4.0, W: 1.76, r: .33, ride: .3, belt: .96, nose: .80, tail: .98, axles: [-1.25, 1.3],  gh: [[-1.94, .96], [-1.72, 1.45], [.32, 1.47], [1.12, .98]] },
+  sedan:   { L: 4.45, W: 1.78, r: .33, ride: .3, belt: .92, nose: .78, tail: .95, axles: [-1.38, 1.35], gh: [[-1.32, .93], [-.72, 1.43], [.42, 1.45], [1.25, .94]] },
+  suv:     { L: 4.5, W: 1.86, r: .36, ride: .38, belt: 1.1, nose: .96, tail: 1.12, axles: [-1.35, 1.35], gh: [[-2.14, 1.1], [-1.98, 1.64], [.48, 1.67], [1.2, 1.12]] },
+  pickup:  { L: 5.3, W: 1.88, r: .38, ride: .42, belt: 1.15, nose: 1.0, tail: 1.15, axles: [-1.75, 1.5], gh: [[-.55, 1.15], [-.5, 1.8], [.75, 1.82], [1.45, 1.17]], bed: [-2.6, -.62] },
+  van:     { L: 4.9, W: 1.9, r: .33, ride: .34, belt: 1.08, nose: .96, tail: 1.1, axles: [-1.5, 1.6], gh: [[-2.42, 1.08], [-2.4, 1.92], [1.02, 1.94], [1.88, 1.1]] },
+  bigvan:  { L: 5.9, W: 2.05, r: .36, ride: .4, belt: 1.2, nose: 1.02, tail: 1.2, axles: [-1.8, 1.95], gh: [[-2.93, 1.2], [-2.92, 2.45], [1.95, 2.47], [2.55, 1.22]] },
+  minitruck:{ L: 4.6, W: 1.66, r: .30, ride: .34, belt: 1.0, nose: .92, tail: .9, axles: [-1.3, 1.6], gh: [[.95, 1.0], [.95, 1.9], [1.95, 1.92], [2.25, 1.02]], cabFrom: .85, deck: .9 },
+  boxtruck:{ L: 4.9, W: 1.76, r: .30, ride: .34, belt: 1.0, nose: .92, tail: .9, axles: [-1.4, 1.75], gh: [[1.1, 1.0], [1.1, 1.92], [2.1, 1.94], [2.4, 1.02]], cabFrom: 1.0, box: [-2.45, .92, 2.35] },
+  motorhome:{ L: 7.0, W: 2.2, r: .40, ride: .42, belt: 1.3, nose: 1.05, tail: 1.3, axles: [-2.2, 2.45], gh: [[-3.45, 1.3], [-3.45, 2.95], [2.55, 2.97], [3.3, 1.32]] },
+  boat:    { L: 5.6, W: 2.1, r: .30, ride: .55, belt: 1.25, axles: [-.6] },
+};
+
+function lowerShape(t, L) {
+  const s = new THREE.Shape(); const h = L / 2, ride = t.ride, r = t.r + .06;
+  s.moveTo(-h, ride + .12);
+  s.lineTo(-h, t.tail - .06); s.quadraticCurveTo(-h, t.tail, -h + .1, t.tail);
+  // cubierta superior hasta el parabrisas
+  const ws = t.gh[t.gh.length - 1][0];
+  if (t.cabFrom !== undefined) { // camioncito: piso de carga bajo, cabina adelante
+    s.lineTo(t.cabFrom, t.tail); s.lineTo(t.cabFrom, t.belt);
+  } else {
+    s.lineTo(ws, t.belt);
+  }
+  s.lineTo(ws + .05, t.belt);
+  s.quadraticCurveTo(h - .25, t.belt - .02, h - .08, t.nose);
+  s.quadraticCurveTo(h, t.nose - .04, h, t.nose - .16);
+  s.lineTo(h, ride + .14); s.quadraticCurveTo(h, ride, h - .14, ride);
+  // fondo con pasaruedas (de adelante hacia atrás)
+  const ax = [...t.axles].sort((a, b) => b - a);
+  for (const a of ax) {
+    s.lineTo(a + r, ride);
+    s.absarc(a, t.r, r, 0, Math.PI, false);
+  }
+  s.lineTo(-h + .14, ride); s.quadraticCurveTo(-h, ride, -h, ride + .12);
+  return s;
+}
+function polyShape(pts) { const s = new THREE.Shape(); s.moveTo(pts[0][0], pts[0][1]); for (let i = 1; i < pts.length; i++) s.lineTo(pts[i][0], pts[i][1]); s.closePath(); return s; }
+function extrude(shape, depth, bevel = .07, segs = 3) {
+  const g = new THREE.ExtrudeGeometry(shape, { depth: depth - bevel * 2, bevelEnabled: true, bevelThickness: bevel, bevelSize: bevel * .9, bevelSegments: segs, curveSegments: 18 });
+  g.translate(0, 0, -(depth - bevel * 2) / 2); return g;
+}
+function wheelsGeo(t, parts) {
+  const tires = [], rims = [];
+  const zs = [t.W / 2 - .17, -(t.W / 2 - .17)];
+  for (const x of t.axles) for (const z of zs) {
+    const tire = new THREE.CylinderGeometry(t.r, t.r, .26, 32); tire.rotateX(Math.PI / 2); tire.translate(x, t.r, z); tires.push(tire);
+    const rim = new THREE.CylinderGeometry(t.r * .7, t.r * .7, .262, 20); rim.rotateX(Math.PI / 2); rim.translate(x, t.r, z); rims.push(rim);
+  }
+  parts.tire.push(mergeGeometries(tires)); parts.rim.push(mergeGeometries(rims));
+}
+function lightsGeo(t, parts) {
+  const h = t.L / 2, heads = [], tails = [];
+  for (const s of [1, -1]) {
+    const hl = new THREE.BoxGeometry(.06, .1, .34); hl.translate(h - .03, t.nose - .12, s * (t.W / 2 - .3)); heads.push(hl);
+    const tl = new THREE.BoxGeometry(.05, .12, .3); tl.translate(-h + .02, t.tail - .2, s * (t.W / 2 - .25)); tails.push(tl);
+  }
+  parts.head.push(mergeGeometries(heads)); parts.tail.push(mergeGeometries(tails));
+}
+function detailGeo(key, t, parts) {
+  const h = t.L / 2, W = t.W, gh = t.gh, roofY = Math.max(gh[1][1], gh[2][1]);
+  const B = (w, hh, d, x, y, z) => { const g = new THREE.BoxGeometry(w, hh, d); g.translate(x, y, z); return g; };
+  const ax = [...t.axles].sort((a, b) => a - b);
+  // zócalo negro entre ruedas
+  parts.dark.push(B(ax[ax.length - 1] - ax[0] - 2 * t.r - .2, .13, W + .02, (ax[0] + ax[ax.length - 1]) / 2, t.ride + .07, 0));
+  // paragolpes inferiores, parrilla y patente
+  parts.dark.push(B(.14, .2, W - .12, h - .03, t.ride + .2, 0));
+  parts.dark.push(B(.14, .2, W - .12, -h + .03, t.ride + .22, 0));
+  parts.dark.push(B(.04, Math.max(.12, (t.nose - t.ride) * .35), W * .52, h + .005, t.nose - .3, 0));
+  parts.rim.push(B(.03, .11, .42, -h - .005, t.ride + .4, 0));
+  // espejos
+  for (const sgn of [1, -1]) parts.body.push(B(.16, .1, .16, gh[3][0] - .12, t.belt + .14, sgn * (W / 2 + .06)));
+  // parantes del color de la carrocería y juntas de puertas
+  const ghH = roofY - t.belt, gw = W * .9 + .035;
+  const pillars = [];
+  if (['hatch', 'sedan', 'suv', 'pickup'].includes(key) || key === 'minitruck2') pillars.push(key === 'pickup' || key === 'minitruck2' ? (gh[0][0] + gh[3][0]) / 2 + .05 : (gh[1][0] + gh[3][0]) / 2 + .15);
+  if (['van', 'bigvan', 'motorhome'].includes(key)) { pillars.push(gh[3][0] - .95); pillars.push(gh[3][0] - 2.2); }
+  for (const px of pillars) { parts.body.push(B(.1, ghH, gw, px, t.belt + ghH / 2, 0)); parts.dark.push(B(.012, t.belt - t.ride - .22, W + .014, px + .04, (t.belt + t.ride) / 2 + .02, 0)); }
+  parts.dark.push(B(.012, t.belt - t.ride - .22, W + .014, gh[3][0] - .06, (t.belt + t.ride) / 2 + .02, 0));
+  // línea de cintura
+  parts.dark.push(B(gh[3][0] - gh[0][0] - .05, .025, W * .9 + .02, (gh[0][0] + gh[3][0]) / 2, t.belt + .012, 0));
+}
+function buildType(key) {
+  const t = T[key]; const L = t.L; const parts = { body: [], glass: [], tire: [], rim: [], head: [], tail: [], dark: [] };
+  if (key === 'boat') {
+    const h = L / 2;
+    const hull = polyShape([[-h, .55], [-h, 1.3], [h - .4, 1.32], [h, 1.18], [h - .5, .62], [h - 1.4, .5], [-h + .2, .5]]);
+    const g = extrude(hull, t.W, .12, 4); const p = g.attributes.position;
+    for (let i = 0; i < p.count; i++) { const x = p.getX(i), y = p.getY(i); const f = Math.max(0, (x + h * .2) / (h * 1.2)); const k = 1 - .82 * f * f; const kb = 1 - .25 * Math.max(0, (1.25 - y) / .8); p.setZ(i, p.getZ(i) * k * kb); }
+    g.computeVertexNormals(); parts.body.push(g);
+    const ws = new THREE.BoxGeometry(.06, .38, 1.4); ws.rotateZ(-.5); ws.translate(.55, 1.5, 0); parts.glass.push(ws);
+    const seat = new THREE.BoxGeometry(.9, .3, 1.4); seat.translate(-.9, 1.42, 0); parts.dark.push(seat);
+    const trailer = new THREE.BoxGeometry(L - .6, .1, .12); const tr1 = trailer.clone().translate(-.1, .45, .7), tr2 = trailer.clone().translate(-.1, .45, -.7);
+    const bar = new THREE.BoxGeometry(1.3, .08, .08); bar.translate(h + .25, .45, 0); parts.dark.push(mergeGeometries([tr1, tr2, bar]));
+    const tires = [], rims = []; for (const z of [.95, -.95]) { const ti = new THREE.CylinderGeometry(.3, .3, .2, 24); ti.rotateX(Math.PI / 2); ti.translate(-.6, .3, z); tires.push(ti); const ri = new THREE.CylinderGeometry(.18, .18, .21, 16); ri.rotateX(Math.PI / 2); ri.translate(-.6, .3, z); rims.push(ri); }
+    parts.tire.push(mergeGeometries(tires)); parts.rim.push(mergeGeometries(rims));
+    const stripe = new THREE.BoxGeometry(L * .78, .07, t.W * .98); stripe.translate(-.25, 1.12, 0); parts.head.push(new THREE.BoxGeometry(.01, .01, .01)); parts.tail.push(new THREE.BoxGeometry(.01, .01, .01));
+    parts.dark.push(stripe);
+    t.H = 1.9; t.cabin = null;
+  } else {
+    parts.body.push(extrude(lowerShape(t, L), t.W, .08));
+    // invernadero (vidrios) y techo
+    const gh = t.gh; const glass = extrude(polyShape([gh[0], gh[1], gh[2], gh[3]]), t.W * .9, .05, 2);
+    parts.glass.push(glass);
+    const roofY = Math.max(gh[1][1], gh[2][1]);
+    const roof = extrude(polyShape([[gh[1][0] + .02, roofY - .05], [gh[1][0] + .04, roofY + .02], [gh[2][0] - .02, roofY + .03], [gh[2][0], roofY - .05]]), t.W * .9, .03, 1);
+    parts.body.push(roof);
+    if (t.bed) { // caja de pick-up
+      const bed = new THREE.BoxGeometry(t.bed[1] - t.bed[0], .05, t.W - .3); bed.translate((t.bed[0] + t.bed[1]) / 2, t.belt - .45, 0); parts.dark.push(bed);
+      const inner = new THREE.BoxGeometry(t.bed[1] - t.bed[0] - .05, .5, t.W - .26); inner.translate((t.bed[0] + t.bed[1]) / 2, t.belt - .2, 0); parts.dark.push(inner);
+    }
+    if (t.deck !== undefined) { // camioncito con caja de madera/chapa
+      const len = (t.cabFrom - .05) - (-L / 2); const cx = (-L / 2 + t.cabFrom - .05) / 2;
+      const floor = new THREE.BoxGeometry(len, .08, t.W); floor.translate(cx, t.deck + .04, 0);
+      const sides = []; for (const z of [t.W / 2 - .03, -(t.W / 2 - .03)]) { const sb = new THREE.BoxGeometry(len, .38, .05); sb.translate(cx, t.deck + .27, z); sides.push(sb); }
+      const back = new THREE.BoxGeometry(.05, .38, t.W); back.translate(-L / 2 + .03, t.deck + .27, 0);
+      const front = new THREE.BoxGeometry(.06, .7, t.W); front.translate(t.cabFrom - .08, t.deck + .43, 0);
+      parts.dark.push(mergeGeometries([floor, ...sides, back, front]));
+      if (key === 'minitruck') t.dblExtra = true;
+    }
+    if (t.box) { const [x0, y0, y1] = t.box; const len = t.cabFrom - .08 - x0; const b = new THREE.BoxGeometry(len, y1 - y0, t.W + .06); b.translate(x0 + len / 2, (y0 + y1) / 2, 0); parts.body.push(b); }
+    if (key === 'motorhome') { const strip = new THREE.BoxGeometry(5.2, .42, t.W * .92 + .02); strip.translate(-.6, 2.1, 0); parts.glass.push(strip); }
+    detailGeo(key, t, parts); wheelsGeo(t, parts); lightsGeo(t, parts);
+    t.H = Math.max(t.gh[1][1], t.gh[2][1], t.box ? t.box[2] : 0) + .05;
+  }
+  const out = {};
+  for (const k in parts) { if (!parts[k].length) continue; const geos = parts[k].map(g => g.index ? g.toNonIndexed() : g); geos.forEach(g => { for (const a of Object.keys(g.attributes)) if (!['position', 'normal', 'uv'].includes(a)) g.deleteAttribute(a); }); out[k] = mergeGeometries(geos); }
+  return out;
+}
+// cabina doble de camioncito: se arma como variante
+T.minitruck2 = { ...T.minitruck, gh: [[-.15, 1.0], [-.15, 1.9], [1.95, 1.92], [2.25, 1.02]], cabFrom: -.25, axles: [-1.3, 1.6] };
+const typeKey = c => (c.body === 'minitruck' && c.dbl) ? 'minitruck2' : c.body;
+
+/* ---------------- materiales ---------------- */
+const M = {
+  body: new THREE.MeshPhysicalMaterial({ color: 0xffffff, metalness: .55, roughness: .32, clearcoat: 1, clearcoatRoughness: .08 }),
+  glass: new THREE.MeshPhysicalMaterial({ color: 0x121a26, metalness: .35, roughness: .04, clearcoat: 1, envMapIntensity: 2.2 }),
+  tire: new THREE.MeshStandardMaterial({ color: 0x141414, roughness: .92 }),
+  rim: new THREE.MeshStandardMaterial({ color: 0xd4d8de, metalness: 1, roughness: .22 }),
+  head: new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xdfe8ff, emissiveIntensity: .9 }),
+  tail: new THREE.MeshStandardMaterial({ color: 0x5a0000, emissive: 0xff1a1a, emissiveIntensity: 1.1 }),
+  dark: new THREE.MeshStandardMaterial({ color: 0x17191d, roughness: .7, metalness: .1 }),
+};
+
+/* ---------------- galpón: distribución ---------------- */
+const BAY = 3.35, ROWS = [{ front: -12, dir: 1, aisle: -9 }, { front: -6, dir: -1, aisle: -9 }, { front: 6, dir: 1, aisle: 9 }, { front: 12, dir: -1, aisle: 9 }];
+const ZONE_GAP = 4.5;
+let x = 0; const zoneSpans = [];
+const order = [];
+for (const z of ZONES) {
+  const list = cars.filter(c => c.zone === z);
+  list.sort((a, b) => (a.cur === b.cur ? a.price - b.price : a.cur === 'ARS' ? -1 : 1));
+  const rows = z.rows || [0, 1, 2, 3]; const startX = x;
+  list.forEach((c, k) => {
+    const col = Math.floor(k / rows.length), row = ROWS[rows[k % rows.length]];
+    const t = T[typeKey(c)];
+    c.x = startX + col * BAY + BAY / 2; c.row = row;
+    c.z = row.front - row.dir * t.L / 2; c.rotY = row.dir > 0 ? -Math.PI / 2 : Math.PI / 2;
+    c.L = t.L; c.W = t.W; c.H = 0; order.push(c);
+  });
+  const cols = Math.ceil(list.length / rows.length);
+  zoneSpans.push({ zone: z, x0: startX, x1: startX + cols * BAY, n: list.length });
+  x = startX + cols * BAY + ZONE_GAP;
+}
+const LEN = x - ZONE_GAP; const X0 = -9, X1 = LEN + 8, ZW = 21.5;
+cars.forEach(c => { c.cx = c.x; });
+
+/* ---------------- piso, paredes, techo ---------------- */
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(X1 - X0, ZW * 2), new THREE.MeshStandardMaterial({ map: concreteTex, roughness: .26, metalness: .05, color: 0x5d6168, envMapIntensity: .8 }));
+floor.rotation.x = -Math.PI / 2; floor.position.set((X0 + X1) / 2, 0, 0); scene.add(floor);
+
+// pasillos pintados
+const aisleMat = new THREE.MeshStandardMaterial({ color: 0x2c3038, roughness: .35, transparent: true, opacity: .7 });
+for (const az of [-9, 9]) { const a = new THREE.Mesh(new THREE.PlaneGeometry(X1 - X0 - 4, 5.2), aisleMat); a.rotation.x = -Math.PI / 2; a.position.set((X0 + X1) / 2, .004, az); scene.add(a); }
+// líneas de cocheras
+const lineMat = new THREE.MeshBasicMaterial({ color: 0xb9c0ca });
+const lines = [];
+for (const s of zoneSpans) {
+  const rowsUsed = s.zone.rows || [0, 1, 2, 3];
+  for (const ri of rowsUsed) { const r = ROWS[ri]; const depth = s.zone.id === 'esp' ? 7.6 : 5.6; const zc = r.front - r.dir * depth / 2;
+    for (let xx = s.x0; xx <= s.x1 + .01; xx += BAY) { const l = new THREE.PlaneGeometry(.1, depth); l.rotateX(-Math.PI / 2); l.translate(xx, .006, zc); lines.push(l); }
+    const fl = new THREE.PlaneGeometry(s.x1 - s.x0, .1); fl.rotateX(-Math.PI / 2); fl.translate((s.x0 + s.x1) / 2, .006, r.front); lines.push(fl);
+  }
+}
+scene.add(new THREE.Mesh(mergeGeometries(lines), lineMat));
+// nombres de zona pintados en el piso y carteles colgantes
+for (const s of zoneSpans) {
+  const tex = textTex(s.zone.label.toUpperCase(), { size: 170, color: '#4C82EC', w: 1400, h: 260 });
+  for (const az of [-9, 9]) {
+    const p = new THREE.Mesh(new THREE.PlaneGeometry(4.6, .86), new THREE.MeshStandardMaterial({ map: tex, transparent: true, roughness: .6, depthWrite: false }));
+    p.rotation.x = -Math.PI / 2; p.rotation.z = -Math.PI / 2 * 0; p.position.set(s.x0 + 2.4, .008, az); p.rotation.order = 'YXZ'; p.rotation.y = -Math.PI / 2; p.rotation.x = -Math.PI / 2;
+    scene.add(p);
+    const sign = textTex(s.zone.label, { size: 120, color: '#ffffff', bg: '#1d4fb3', w: 1024, h: 220, sub: `${s.n} ${s.n === 1 ? 'vehículo' : 'vehículos'}` });
+    const sg = new THREE.Mesh(new THREE.PlaneGeometry(4.2, .9), new THREE.MeshBasicMaterial({ map: sign, side: THREE.FrontSide }));
+    sg.position.set(s.x0 + 1, 5.4, az); sg.rotation.y = -Math.PI / 2; scene.add(sg);
+    const back = sg.clone(); back.rotation.y = Math.PI / 2; back.position.x += .02; scene.add(back);
+  }
+}
+// paredes de chapa
+const H = 9.5;
+const wallMat = new THREE.MeshStandardMaterial({ map: wallTex, roughness: .5, metalness: .35, color: 0x6f7782 });
+const mkWall = (w, px, pz, ry) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, H), wallMat); m.position.set(px, H / 2, pz); m.rotation.y = ry; scene.add(m); return m; };
+mkWall(X1 - X0, (X0 + X1) / 2, -ZW, 0); mkWall(X1 - X0, (X0 + X1) / 2, ZW, Math.PI);
+mkWall(ZW * 2, X1, 0, -Math.PI / 2);
+// pared de entrada con portón abierto
+const doorW = 12, side = (ZW * 2 - doorW) / 2;
+const e1 = new THREE.Mesh(new THREE.PlaneGeometry(side, H), wallMat); e1.position.set(X0, H / 2, -ZW + side / 2); e1.rotation.y = Math.PI / 2; scene.add(e1);
+const e2 = e1.clone(); e2.position.z = ZW - side / 2; scene.add(e2);
+const lintel = new THREE.Mesh(new THREE.PlaneGeometry(doorW, H - 5.5), wallMat); lintel.position.set(X0, 5.5 + (H - 5.5) / 2, 0); lintel.rotation.y = Math.PI / 2; scene.add(lintel);
+const dusk = canvasTex(64, 256, (g, w, h) => { const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#1b2a4a'); gr.addColorStop(.55, '#6a5a78'); gr.addColorStop(.8, '#e39a62'); gr.addColorStop(1, '#2a2522'); g.fillStyle = gr; g.fillRect(0, 0, w, h); });
+const outside = new THREE.Mesh(new THREE.PlaneGeometry(60, 30), new THREE.MeshBasicMaterial({ map: dusk, fog: false })); outside.position.set(X0 - 30, 9, 0); outside.rotation.y = Math.PI / 2; scene.add(outside);
+const lot = new THREE.Mesh(new THREE.PlaneGeometry(30, 40), new THREE.MeshStandardMaterial({ color: 0x2b2d31, roughness: .9 })); lot.rotation.x = -Math.PI / 2; lot.position.set(X0 - 15, -.01, 0); scene.add(lot);
+// marca en la pared del fondo
+const wm = textTex('TUTU AUTOMOTORES', { w: 2048, h: 360, size: 210, color: '#ffffff', bg: '#1d4fb3', sub: 'Polo 52 · Autopista Córdoba–Rosario' });
+const brandWall = new THREE.Mesh(new THREE.PlaneGeometry(22, 3.9), new THREE.MeshBasicMaterial({ map: wm })); brandWall.position.set(X1 - .05, 5.6, 0); brandWall.rotation.y = -Math.PI / 2; scene.add(brandWall);
+const wm2 = new THREE.Mesh(new THREE.PlaneGeometry(26, 4.6), new THREE.MeshBasicMaterial({ map: wm })); wm2.position.set((X0 + X1) / 2, 6.4, -ZW + .05); scene.add(wm2);
+// techo, cabriadas y luminarias
+const roof = new THREE.Mesh(new THREE.PlaneGeometry(X1 - X0, ZW * 2), new THREE.MeshStandardMaterial({ color: 0x1c2027, roughness: .9 })); roof.rotation.x = Math.PI / 2; roof.position.set((X0 + X1) / 2, H, 0); scene.add(roof);
+const beams = [], lamps = [];
+for (let bx = X0 + 4; bx < X1; bx += 8) {
+  const b = new THREE.BoxGeometry(.25, .5, ZW * 2); b.translate(bx, H - .45, 0); beams.push(b);
+  const d = new THREE.BoxGeometry(.12, 1.6, .12); for (let k = -ZW + 3; k < ZW; k += 6) { const dd = d.clone(); dd.rotateX(.6); dd.translate(bx, H - 1.1, k); beams.push(dd); }
+  for (const lz of [-15, -3, 3, 15]) { const l = new THREE.BoxGeometry(3.2, .08, .32); l.translate(bx + 2, H - 1.4, lz); lamps.push(l); }
+}
+const col = new THREE.BoxGeometry(.4, H, .4); for (let bx = X0 + 4; bx < X1; bx += 16) for (const zz of [-ZW + .3, ZW - .3]) beams.push(col.clone().translate(bx, H / 2, zz));
+scene.add(new THREE.Mesh(mergeGeometries(beams), new THREE.MeshStandardMaterial({ color: 0x3b4350, metalness: .6, roughness: .5 })));
+scene.add(new THREE.Mesh(mergeGeometries(lamps), new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xfff6e8, emissiveIntensity: 2.2 })));
+// un poco de luz cálida puntual sobre los pasillos
+for (let bx = X0 + 12; bx < X1; bx += 24) for (const lz of [-9, 9]) { const pl = new THREE.PointLight(0xfff1dc, 26, 24, 1.5); pl.position.set(bx, H - 1.6, lz); scene.add(pl); }
+bar(.35);
+
+/* ---------------- autos instanciados ---------------- */
+const byType = {};
+cars.forEach(c => { (byType[typeKey(c)] ||= []).push(c); });
+const pickables = []; const typeMeshes = {};
+const dummy = new THREE.Object3D(); const tmpC = new THREE.Color();
+for (const key in byType) {
+  const list = byType[key]; const geos = buildType(key); const t = T[key]; const meshes = {};
+  for (const part in geos) {
+    const im = new THREE.InstancedMesh(geos[part], M[part], list.length);
+    list.forEach((c, k) => { dummy.position.set(c.x, 0, c.z); dummy.rotation.set(0, c.rotY, 0); dummy.scale.set(1, 1, 1); dummy.updateMatrix(); im.setMatrixAt(k, dummy.matrix); if (part === 'body') im.setColorAt(k, paintOf(c)); });
+    im.instanceMatrix.needsUpdate = true; if (im.instanceColor) im.instanceColor.needsUpdate = true;
+    im.userData = { cars: list, part }; scene.add(im); meshes[part] = im;
+    if (part === 'body' || part === 'glass') pickables.push(im);
+  }
+  list.forEach((c, k) => { c.H = t.H; c.typeKey = key; c.k = k; });
+  typeMeshes[key] = meshes;
+}
+// sombras de contacto
+const sh = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: shadowTex, transparent: true, depthWrite: false }), cars.length);
+cars.forEach((c, k) => { dummy.position.set(c.x, .012, c.z); dummy.rotation.set(0, c.rotY, 0); dummy.scale.set(c.L * 1.18, 1, c.W * 1.45); dummy.updateMatrix(); sh.setMatrixAt(k, dummy.matrix); });
+scene.add(sh);
+// aro de selección
+const ringMat = new THREE.MeshBasicMaterial({ color: 0x4C82EC, transparent: true, opacity: .0, depthWrite: false });
+const ring = new THREE.Mesh(new THREE.RingGeometry(.96, 1, 64).rotateX(-Math.PI / 2), ringMat); ring.position.y = .015; scene.add(ring);
+const ringIn = new THREE.Mesh(new THREE.CircleGeometry(.96, 64).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0x4C82EC, transparent: true, opacity: 0, depthWrite: false })); ringIn.position.y = .013; scene.add(ringIn);
+
+function setInstanceVisible(c, vis) {
+  const ms = typeMeshes[c.typeKey];
+  for (const p in ms) { const im = ms[p]; dummy.position.set(c.x, 0, c.z); dummy.rotation.set(0, c.rotY, 0); dummy.scale.setScalar(vis ? 1 : 0.0001); dummy.updateMatrix(); im.setMatrixAt(c.k, dummy.matrix); im.instanceMatrix.needsUpdate = true; }
+}
+function tintCars(match) {
+  for (const key in typeMeshes) { const im = typeMeshes[key].body; im.userData.cars.forEach((c, k) => { tmpC.copy(paintOf(c)); if (!match(c)) tmpC.lerp(new THREE.Color(0x23272e), .82); im.setColorAt(k, tmpC); }); im.instanceColor.needsUpdate = true; }
+}
+
+/* ---------------- colisiones ---------------- */
+const boxes = cars.map(c => { const along = c.rotY !== 0; const hx = (along ? c.W : c.L) / 2 + .45, hz = (along ? c.L : c.W) / 2 + .45; return { x0: c.x - hx, x1: c.x + hx, z0: c.z - hz, z1: c.z + hz }; });
+function collide(p) {
+  p.x = Math.min(Math.max(p.x, X0 - 6), X1 - .8); p.z = Math.min(Math.max(p.z, -ZW + .8), ZW - .8);
+  if (p.x < X0 + .4 && Math.abs(p.z) > doorW / 2 - .6) p.x = X0 + .4;
+  for (const b of boxes) if (p.x > b.x0 && p.x < b.x1 && p.z > b.z0 && p.z < b.z1) {
+    const dx0 = p.x - b.x0, dx1 = b.x1 - p.x, dz0 = p.z - b.z0, dz1 = b.z1 - p.z; const m = Math.min(dx0, dx1, dz0, dz1);
+    if (m === dx0) p.x = b.x0; else if (m === dx1) p.x = b.x1; else if (m === dz0) p.z = b.z0; else p.z = b.z1;
+  }
+}
+
+/* ---------------- interior (se arma al entrar) ---------------- */
+const IM = {
+  trim: new THREE.MeshStandardMaterial({ color: 0x1d2026, roughness: .75 }),
+  seat: new THREE.MeshStandardMaterial({ color: 0x2a2e35, roughness: .85 }),
+  stitch: new THREE.MeshStandardMaterial({ color: 0x2A63D4, roughness: .6 }),
+  head: new THREE.MeshStandardMaterial({ color: 0x6d7279, roughness: .95, side: THREE.DoubleSide }),
+  metal: new THREE.MeshStandardMaterial({ color: 0x8d949c, metalness: .85, roughness: .3 }),
+  carpet: new THREE.MeshStandardMaterial({ color: 0x15171b, roughness: 1 }),
+};
+const screenTex = canvasTex(512, 256, (g, w, h) => {
+  g.fillStyle = '#0b1220'; g.fillRect(0, 0, w, h);
+  g.strokeStyle = '#1c2a44'; g.lineWidth = 2; for (let i = 0; i < 14; i++) { g.beginPath(); g.moveTo(0, 30 + i * 18); g.bezierCurveTo(w * .3, 10 + i * 20, w * .6, 60 + i * 12, w, 20 + i * 19); g.stroke(); }
+  g.strokeStyle = '#4C82EC'; g.lineWidth = 6; g.beginPath(); g.moveTo(60, 220); g.bezierCurveTo(160, 160, 260, 200, 330, 90); g.stroke();
+  g.fillStyle = '#ffffff'; g.font = '800 44px Archivo, sans-serif'; g.fillText('TUTU', 380, 70);
+  g.font = '600 22px Archivo, sans-serif'; g.fillStyle = '#9fb3d6'; g.fillText('Polo 52', 380, 104);
+});
+const gaugeTex = canvasTex(256, 128, (g, w, h) => {
+  g.fillStyle = '#05070b'; g.fillRect(0, 0, w, h);
+  for (const cx of [64, 192]) { g.strokeStyle = '#2b3445'; g.lineWidth = 6; g.beginPath(); g.arc(cx, 70, 46, Math.PI * .8, Math.PI * 2.2); g.stroke(); g.strokeStyle = '#4C82EC'; g.beginPath(); g.arc(cx, 70, 46, Math.PI * .8, Math.PI * 1.35); g.stroke(); g.fillStyle = '#ffffff'; g.font = '700 22px Archivo, sans-serif'; g.textAlign = 'center'; g.fillText(cx < 100 ? '0' : 'P', cx, 78); }
+});
+let cabin = null;
+function buildCabin(c) {
+  const t = T[c.typeKey]; const grp = new THREE.Group();
+  const gh = t.gh, wsBase = gh[3][0], rearX = gh[0][0], roofY = Math.max(gh[1][1], gh[2][1]);
+  const W = t.W - .16, floorY = t.ride + .16, belt = t.belt;
+  const front = wsBase - .05, back = Math.max(rearX + .05, front - (c.body === 'van' || c.body === 'bigvan' || c.body === 'motorhome' ? 3.2 : 2.6));
+  const box = (w, h, d, x, y, z, m, rx = 0, rz = 0) => { const me = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); me.position.set(x, y, z); me.rotation.set(rx, 0, rz); grp.add(me); return me; };
+  // piso, alfombra, techo
+  box(front - back + .4, .04, W, (front + back) / 2, floorY, 0, IM.carpet);
+  const hl = new THREE.Mesh(new THREE.PlaneGeometry(front - back + .3, W), IM.head); hl.rotation.x = Math.PI / 2; hl.position.set((front + back) / 2 - .1, roofY - .04, 0); grp.add(hl);
+  // paneles de puerta
+  for (const s of [1, -1]) { box(front - back + .3, belt - floorY + .05, .06, (front + back) / 2, (belt + floorY) / 2, s * W / 2, IM.trim); box(front - back + .2, .05, .1, (front + back) / 2, belt + .02, s * (W / 2 - .04), IM.trim); box(front - back - .2, .012, .012, (front + back) / 2, belt - .12, s * (W / 2 - .035), IM.stitch); }
+  // tablero
+  const dashX = front - .3; box(.6, .34, W, dashX, belt - .02, 0, IM.trim); box(.5, .06, W, dashX - .05, belt + .16, 0, IM.trim, 0, -.12);
+  const binn = box(.18, .16, .5, dashX - .26, belt + .14, -W * .22, IM.trim);
+  const gauge = new THREE.Mesh(new THREE.PlaneGeometry(.44, .16), new THREE.MeshBasicMaterial({ map: gaugeTex })); gauge.position.set(dashX - .36, belt + .13, -W * .22); gauge.rotation.y = -Math.PI / 2; gauge.rotation.order = 'YXZ'; gauge.rotation.x = -.15; grp.add(gauge);
+  const scr = new THREE.Mesh(new THREE.PlaneGeometry(.34, .2), new THREE.MeshBasicMaterial({ map: screenTex })); scr.position.set(dashX - .31, belt + .17, .02); scr.rotation.order = 'YXZ'; scr.rotation.y = -Math.PI / 2; scr.rotation.x = -.2; grp.add(scr);
+  // consola central y palanca
+  box(1.0, .22, .26, dashX - .75, floorY + .2, 0, IM.trim);
+  box(.05, .16, .05, dashX - .62, floorY + .38, 0, IM.metal); const knob = new THREE.Mesh(new THREE.SphereGeometry(.045, 16, 12), IM.trim); knob.position.set(dashX - .62, floorY + .48, 0); grp.add(knob);
+  // volante (lado izquierdo = -z)
+  const wheel = new THREE.Group(); const rim = new THREE.Mesh(new THREE.TorusGeometry(.19, .022, 12, 40), IM.trim); wheel.add(rim);
+  const hub = new THREE.Mesh(new THREE.CylinderGeometry(.06, .06, .05, 20), IM.trim); hub.rotation.x = Math.PI / 2; wheel.add(hub);
+  for (const a of [0, 2.1, 4.2]) { const sp = new THREE.Mesh(new THREE.BoxGeometry(.17, .025, .02), IM.metal); sp.position.set(Math.cos(a - Math.PI / 2) * .09, Math.sin(a - Math.PI / 2) * .09, 0); sp.rotation.z = a - Math.PI / 2; wheel.add(sp); }
+  const logo = new THREE.Mesh(new THREE.CircleGeometry(.03, 20), IM.stitch); logo.position.z = .028; wheel.add(logo);
+  wheel.position.set(dashX - .55, belt + .02, -W * .22); wheel.rotation.order = 'YXZ'; wheel.rotation.y = -Math.PI / 2; wheel.rotation.x = .38; grp.add(wheel);
+  const col_ = box(.3, .06, .06, dashX - .4, belt - .02, -W * .22, IM.trim, 0, -.38);
+  // asientos delanteros
+  const seatX = dashX - 1.15;
+  const seat = (sx, sz, w) => {
+    box(.5, .12, w, sx, floorY + .32, sz, IM.seat); box(.1, .62, w, sx - .27, floorY + .66, sz, IM.seat, 0, .14);
+    box(.06, .03, w * .9, sx - .21, floorY + .7, sz, IM.stitch, 0, .14);
+    box(.12, .18, w * .55, sx - .36, floorY + 1.08, sz, IM.seat, 0, .1);
+  };
+  seat(seatX, -W * .22, .5); seat(seatX, W * .22, .5);
+  // asiento trasero si entra
+  if (seatX - .95 > back) { box(.5, .12, W * .9, seatX - .95, floorY + .32, 0, IM.seat); box(.1, .6, W * .9, seatX - 1.22, floorY + .65, 0, IM.seat, 0, .12); }
+  // parantes y espejo
+  for (const s of [1, -1]) { const ap = box(.06, Math.hypot(gh[3][0] - gh[2][0], gh[3][1] - gh[2][1]), .07, (gh[2][0] + gh[3][0]) / 2, (gh[2][1] + gh[3][1]) / 2, s * (W / 2 - .02), IM.trim, 0, Math.atan2(gh[3][0] - gh[2][0], gh[2][1] - gh[3][1])); }
+  box(.04, .07, .26, gh[2][0] - .08, roofY - .16, 0, IM.trim);
+  // capot visible por el parabrisas
+  const hood = new THREE.Mesh(new THREE.BoxGeometry(t.L / 2 - wsBase, .05, t.W - .1), new THREE.MeshPhysicalMaterial({ color: paintOf(c), metalness: .55, roughness: .3, clearcoat: 1 }));
+  hood.position.set((t.L / 2 + wsBase) / 2, belt - .03, 0); hood.rotation.z = -.06; grp.add(hood);
+  // marco del parabrisas
+  box(.05, .06, W, wsBase - .02, belt + .03, 0, IM.trim); box(.05, .06, W, gh[2][0], roofY - .08, 0, IM.trim);
+  grp.position.set(c.x, 0, c.z); grp.rotation.y = c.rotY;
+  grp.userData.eye = new THREE.Vector3(seatX - .2, Math.min(floorY + 1.02, roofY - .2), -W * .22);
+  return grp;
+}
+
+/* ---------------- estado y cámara ---------------- */
+const controls = new OrbitControls(camera, canvas);
+controls.enabled = false; controls.enableDamping = true; controls.dampingFactor = .08; controls.enablePan = false;
+const walk = { pos: new THREE.Vector3(X0 + 5, 1.65, -9), yaw: -Math.PI / 2, pitch: -.06, vel: new THREE.Vector3() };
+let mode = 'walk'; let sel = null; let tween = null; let hover = null;
+const UPV = new THREE.Vector3(0, 1, 0);
+function lookQuat(pos, target) { const m = new THREE.Matrix4().lookAt(pos, target, UPV); return new THREE.Quaternion().setFromRotationMatrix(m); }
+function flyTo(pos, target, dur, done) {
+  if (REDUCE || window.__fast) dur = 0.01;
+  tween = { t: 0, dur, fp: camera.position.clone(), fq: camera.quaternion.clone(), tp: pos.clone(), tq: lookQuat(pos, target), done };
+}
+const ease = t => 1 - Math.pow(1 - t, 4);
+function carCenter(c) { return new THREE.Vector3(c.x, c.H * .45, c.z); }
+function carFrontDir(c) { return new THREE.Vector3(Math.cos(c.rotY), 0, -Math.sin(c.rotY)); }
+
+function showMode(html) { const m = $('mode'); if (!html) { m.style.display = 'none'; return; } m.innerHTML = html; m.style.display = 'block'; }
+
+function selectCar(c, opts = {}) {
+  const wasInterior = mode === 'interior';
+  if (cabin) { scene.remove(cabin); cabin = null; }
+  if (sel && sel !== c) setInstanceVisible(sel, true);
+  sel = c; mode = 'detail'; controls.enabled = false;
+  setInstanceVisible(c, true);
+  const f = carFrontDir(c), side = new THREE.Vector3(-f.z, 0, f.x);
+  const dist = Math.max(c.L * 1.25, 6.2);
+  const pos = carCenter(c).add(f.clone().multiplyScalar(dist * .72)).add(side.multiplyScalar(dist * .55)); pos.y = Math.max(1.9, c.H * 1.15);
+  flyTo(pos, carCenter(c), wasInterior ? .9 : 1.3, () => {
+    controls.target.copy(carCenter(c)); controls.minDistance = Math.max(3.4, c.L * .85); controls.maxDistance = 16;
+    controls.minPolarAngle = .18 * Math.PI; controls.maxPolarAngle = .485 * Math.PI; controls.rotateSpeed = .7; controls.enableZoom = true;
+    controls.autoRotate = !REDUCE && $('v-spin').getAttribute('aria-pressed') === 'true'; controls.autoRotateSpeed = 1.1;
+    controls.enabled = true; controls.update();
+  });
+  spot.position.set(c.x, 8.5, c.z); spot.target.position.set(c.x, 0, c.z); spot.intensity = 0;
+  fillDetail(c); $('detail').hidden = false; closeCatalog(true);
+  $('v-ext').setAttribute('aria-pressed', 'true'); $('v-int').setAttribute('aria-pressed', 'false');
+  showMode('<b>Vista 360°</b> · arrastrá para girar, pellizcá o rueda para acercar');
+  $('hint').classList.add('gone'); markList(c);
+}
+function enterInterior() {
+  if (!sel || sel.body === 'boat') return;
+  const c = sel; mode = 'interior'; controls.enabled = false; controls.autoRotate = false;
+  cabin = buildCabin(c); scene.add(cabin); setInstanceVisible(c, false);
+  const eye = cabin.userData.eye.clone(); cabin.updateMatrixWorld(); cabin.localToWorld(eye);
+  const f = carFrontDir(c); const look = eye.clone().add(f.clone().multiplyScalar(2)); look.y -= .25;
+  flyTo(eye, look, 1.2, () => {
+    controls.target.copy(eye.clone().add(f.clone().multiplyScalar(.012)).setY(eye.y - .002));
+    controls.minDistance = 0; controls.maxDistance = 1; controls.enableZoom = false; controls.rotateSpeed = -.38;
+    controls.minPolarAngle = .22 * Math.PI; controls.maxPolarAngle = .7 * Math.PI; controls.autoRotate = false;
+    controls.enabled = true; controls.update();
+  });
+  $('v-ext').setAttribute('aria-pressed', 'false'); $('v-int').setAttribute('aria-pressed', 'true');
+  showMode('<b>Interior</b> · arrastrá para mirar alrededor');
+}
+function backToWalk() {
+  if (!sel) return; const c = sel;
+  if (cabin) { scene.remove(cabin); cabin = null; } setInstanceVisible(c, true);
+  controls.enabled = false; controls.autoRotate = false; mode = 'tween';
+  const p = new THREE.Vector3(c.x, 1.65, c.row.aisle + (c.row.aisle < 0 ? -1 : 1) * 0 + (c.row.dir > 0 ? 1.2 : -1.2) * 0);
+  p.z = c.row.aisle + (c.row.front > c.row.aisle ? -1 : 1) * 1.2;
+  const tgt = new THREE.Vector3(c.x, 1.1, c.z);
+  flyTo(p, tgt, 1.0, () => { walk.pos.copy(p); const d = tgt.clone().sub(p); walk.yaw = Math.atan2(-d.x, -d.z); walk.pitch = -.12; mode = 'walk'; });
+  sel = null; $('detail').hidden = true; showMode(''); spot.intensity = 0; markList(null);
+}
+function stepCar(dir) { if (!sel) return; const i = order.indexOf(sel); selectCar(order[(i + dir + order.length) % order.length]); }
+
+/* ---------------- panel de detalle ---------------- */
+let photos = [], pi = 0;
+function showPhoto(k) {
+  pi = (k + photos.length) % photos.length; const im = $('d-img');
+  im.src = img(photos[pi]); im.alt = `${sel ? sel.name : ''}, foto ${pi + 1} de ${photos.length}`;
+  $('p-count').textContent = `${pi + 1} / ${photos.length}`;
+  [...$('thumbs').children].forEach((b, j) => b.setAttribute('aria-current', j === pi ? 'true' : 'false'));
+}
+function fillDetail(c) {
+  photos = c.imgs.length ? c.imgs : [];
+  $('thumbs').innerHTML = photos.map((p, j) => `<button aria-label="Ver foto ${j + 1}"><img loading="lazy" referrerpolicy="no-referrer" src="${img(p, true)}" onerror="this.onerror=null;this.src='${img(p)}'" alt=""></button>`).join('');
+  [...$('thumbs').children].forEach((b, j) => b.onclick = () => showPhoto(j));
+  if (photos.length) showPhoto(0);
+  $('d-zone').textContent = c.zone.label + (c.isNew ? ' · 0 km' : '');
+  $('d-name').textContent = c.name;
+  $('d-price').innerHTML = fmtPrice(c) + (c.cur === 'USD' ? '<small>dólares</small>' : '');
+  const specs = [['Año', c.year], ['Kilómetros', c.km ? fmtN(c.km) + ' km' : '0 km'], ['Transmisión', c.trans], ['Combustible', c.fuel], ['Motor', c.motor], ['Color', c.color ? c.color.charAt(0) + c.color.slice(1).toLowerCase() : '']].filter(s => s[1]);
+  $('d-specs').innerHTML = specs.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('');
+  const msg = `Hola Tutu! Me interesa el ${c.name} (${fmtPrice(c)}) que vi en el galpón 3D. ¿Sigue disponible?`;
+  $('d-wa').href = `https://wa.me/${WA}?text=${encodeURIComponent(msg)}`;
+  $('d-link').href = `https://tutuautomotores.com/producto/${c.slug}/`;
+  const noInt = c.body === 'boat'; $('v-int').disabled = noInt; $('v-int').title = noInt ? 'Sin interior para este vehículo' : '';
+}
+$('p-prev').onclick = () => showPhoto(pi - 1); $('p-next').onclick = () => showPhoto(pi + 1);
+$('d-close').onclick = backToWalk; $('d-prev').onclick = () => stepCar(-1); $('d-next').onclick = () => stepCar(1);
+$('v-ext').onclick = () => { if (mode === 'interior' && sel) selectCar(sel); };
+$('v-int').onclick = () => { if (mode !== 'interior') enterInterior(); };
+$('v-spin').onclick = () => { const on = $('v-spin').getAttribute('aria-pressed') !== 'true'; $('v-spin').setAttribute('aria-pressed', on); if (mode === 'detail') controls.autoRotate = on; };
+if (REDUCE) $('v-spin').setAttribute('aria-pressed', 'false');
+
+/* ---------------- catálogo ---------------- */
+let filter = 'todos', q = '', sortBy = 'zona';
+const CHIPS = [['todos', 'Todos'], ['0km', '0 km'], ...ZONES.map(z => [z.id, z.label])];
+$('chips').innerHTML = CHIPS.map(([id, l]) => `<button class="chip" data-f="${id}" aria-pressed="${id === 'todos'}">${l}</button>`).join('');
+$('cat-count').textContent = `${cars.length} vehículos en stock · tocá uno y vas directo`;
+const norm = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+const matches = c => (filter === 'todos' || (filter === '0km' ? c.isNew : c.zone.id === filter)) && (!q || norm(c.name + ' ' + c.brand).includes(q));
+function renderList() {
+  let list = order.filter(matches);
+  const pv = c => c.cur === 'USD' ? 1 : 0;
+  const np = c => c.price ? 0 : 1;
+  if (sortBy === 'precio') list.sort((a, b) => np(a) - np(b) || pv(a) - pv(b) || a.price - b.price);
+  if (sortBy === 'precio-desc') list.sort((a, b) => np(a) - np(b) || pv(b) - pv(a) || b.price - a.price);
+  if (sortBy === 'anio') list.sort((a, b) => (+b.year || 0) - (+a.year || 0));
+  if (sortBy === 'km') list.sort((a, b) => a.km - b.km);
+  $('shown').textContent = list.length === cars.length ? 'Todos' : `${list.length} de ${cars.length}`;
+  $('list').innerHTML = list.length ? list.map(c => `<button class="item" data-i="${c.i}"><img loading="lazy" referrerpolicy="no-referrer" src="${img(c.imgs[0], true)}" onerror="this.onerror=null;this.src='${img(c.imgs[0])}'" alt=""><span><b>${c.name}</b><span>${[c.year, c.km ? fmtN(c.km) + ' km' : '0 km', c.trans].filter(Boolean).join(' · ')}${c.isNew ? '<i class="badge0">0 KM</i>' : ''}</span><em>${fmtPrice(c)}</em></span></button>`).join('')
+    : `<p class="empty">No hay autos con “${$('q').value}”. Probá con otra marca o modelo.</p>`;
+  tintCars(matches);
+  markList(sel);
+}
+function markList(c) { document.querySelectorAll('.item').forEach(b => b.classList.toggle('on', !!c && +b.dataset.i === c.i)); }
+$('list').addEventListener('click', e => { const b = e.target.closest('.item'); if (b) selectCar(cars[+b.dataset.i]); });
+$('chips').addEventListener('click', e => {
+  const b = e.target.closest('.chip'); if (!b) return; filter = b.dataset.f;
+  document.querySelectorAll('.chip').forEach(x => x.setAttribute('aria-pressed', x === b)); renderList();
+  const span = zoneSpans.find(s => s.zone.id === filter);
+  if (span && mode === 'walk') { const p = new THREE.Vector3(span.x0 - 2, 1.65, -9); const tg = new THREE.Vector3(span.x0 + 8, 1.4, -9); mode = 'tween'; flyTo(p, tg, 1.4, () => { walk.pos.copy(p); walk.yaw = -Math.PI / 2; walk.pitch = -.08; mode = 'walk'; }); }
+});
+$('q').addEventListener('input', e => { q = norm(e.target.value.trim()); renderList(); });
+$('sort').addEventListener('change', e => { sortBy = e.target.value; renderList(); });
+function closeCatalog(force) { $('catalog').classList.add('closed'); $('btn-cat').setAttribute('aria-expanded', 'false'); }
+$('btn-cat').onclick = () => { const c = $('catalog'); const open = c.classList.contains('closed'); c.classList.toggle('closed', !open); $('btn-cat').setAttribute('aria-expanded', open); if (open && innerWidth <= 860 && sel) backToWalk(); };
+if (innerWidth <= 860) closeCatalog();
+renderList();
+
+/* ---------------- etiquetas flotantes ---------------- */
+const TAGN = 9; const tagEls = [];
+for (let k = 0; k < TAGN; k++) { const b = document.createElement('button'); b.className = 'tag'; b.hidden = true; b.tabIndex = -1; b.innerHTML = '<b></b><span></span>'; $('tags').appendChild(b); tagEls.push(b); b.addEventListener('click', () => { if (b._car) selectCar(b._car); }); }
+const vtmp = new THREE.Vector3(), fwd = new THREE.Vector3();
+function updateTags() {
+  if (mode !== 'walk') { tagEls.forEach(t => t.hidden = true); return; }
+  camera.getWorldDirection(fwd);
+  const cand = [];
+  for (const c of cars) { if (!matches(c)) continue; vtmp.set(c.x - camera.position.x, 0, c.z - camera.position.z); const d = vtmp.length(); if (d > 15 || d < 1.5) continue; vtmp.normalize(); if (vtmp.x * fwd.x + vtmp.z * fwd.z < .45) continue; cand.push([d, c]); }
+  cand.sort((a, b) => a[0] - b[0]);
+  const placed = [];
+  for (let k = 0; k < TAGN; k++) {
+    const el = tagEls[k]; const item = cand[k]; if (!item) { el.hidden = true; el._car = null; continue; }
+    const c = item[1]; vtmp.set(c.x, c.H + .45, c.z).project(camera);
+    if (vtmp.z > 1) { el.hidden = true; continue; }
+    const sx = (vtmp.x * .5 + .5) * innerWidth, sy = (-vtmp.y * .5 + .5) * innerHeight;
+    if (placed.some(([px, py]) => Math.abs(px - sx) < 170 && Math.abs(py - sy) < 52)) { el.hidden = true; continue; }
+    placed.push([sx, sy]);
+    if (el._car !== c) { el._car = c; el.querySelector('b').textContent = fmtPrice(c); el.querySelector('span').textContent = c.name; }
+    el.hidden = false; el.style.transform = `translate(${sx}px,${sy}px) translate(-50%,-100%)`; el.style.opacity = String(Math.min(1, (15 - item[0]) / 4));
+    el.classList.toggle('hot', hover === c);
+  }
+}
+
+/* ---------------- entrada: mouse, teclado, toque ---------------- */
+const keys = new Set();
+addEventListener('keydown', e => {
+  if (e.target.closest('input,select,textarea')) return;
+  if (e.key === 'Escape') { if (mode === 'interior') selectCar(sel); else if (mode === 'detail') backToWalk(); return; }
+  keys.add(e.code); if (mode === 'walk' && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) e.preventDefault();
+  if (mode === 'walk' && /Key[WASD]|Arrow/.test(e.code)) $('hint').classList.add('gone');
+});
+addEventListener('keyup', e => keys.delete(e.code));
+addEventListener('blur', () => keys.clear());
+
+const ray = new THREE.Raycaster(); const ndc = new THREE.Vector2();
+function pick(cx, cy) {
+  ndc.set(cx / innerWidth * 2 - 1, -(cy / innerHeight) * 2 + 1); ray.setFromCamera(ndc, camera);
+  const hit = ray.intersectObjects(pickables, false)[0]; if (!hit || hit.distance > 40) return null;
+  const c = hit.object.userData.cars[hit.instanceId]; return c && matches(c) ? c : (c || null);
+}
+let drag = null; let hoverReq = null, hoverNext = 0;
+canvas.addEventListener('pointerdown', e => { drag = { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, moved: 0, id: e.pointerId }; if (mode === 'walk') { canvas.setPointerCapture(e.pointerId); canvas.classList.add('grabbing'); } });
+canvas.addEventListener('pointermove', e => {
+  if (drag && drag.id === e.pointerId) {
+    const dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag.x = e.clientX; drag.y = e.clientY; drag.moved += Math.abs(dx) + Math.abs(dy);
+    if (mode === 'walk') { const k = e.pointerType === 'touch' ? .0055 : .0034; walk.yaw -= dx * k; walk.pitch = Math.max(-1.1, Math.min(.9, walk.pitch - dy * k)); }
+  } else if (e.pointerType === 'mouse' && mode !== 'interior') {
+    hoverReq = { x: e.clientX, y: e.clientY };
+  }
+});
+canvas.addEventListener('pointerup', e => {
+  canvas.classList.remove('grabbing');
+  if (drag && drag.moved < 8 && mode !== 'interior' && mode !== 'tween') { const c = pick(e.clientX, e.clientY); if (c && c !== sel) selectCar(c); }
+  drag = null;
+});
+canvas.addEventListener('pointercancel', () => { drag = null; canvas.classList.remove('grabbing'); });
+
+// joystick táctil
+const joy = $('joy'), knob = joy.querySelector('i'); const stick = { x: 0, y: 0, id: null };
+joy.addEventListener('pointerdown', e => { stick.id = e.pointerId; joy.setPointerCapture(e.pointerId); moveStick(e); });
+joy.addEventListener('pointermove', e => { if (e.pointerId === stick.id) moveStick(e); });
+const endStick = () => { stick.id = null; stick.x = stick.y = 0; knob.style.transform = ''; };
+joy.addEventListener('pointerup', endStick); joy.addEventListener('pointercancel', endStick);
+function moveStick(e) { const r = joy.getBoundingClientRect(); let dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2); const m = Math.hypot(dx, dy), max = r.width / 2 - 14; if (m > max) { dx *= max / m; dy *= max / m; } stick.x = dx / max; stick.y = dy / max; knob.style.transform = `translate(${dx}px,${dy}px)`; }
+
+addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
+
+/* ---------------- bucle ---------------- */
+const clock = new THREE.Clock(); const mv = new THREE.Vector3();
+camera.position.copy(walk.pos); camera.rotation.set(walk.pitch, walk.yaw, 0);
+function frame() {
+  const rawDt = clock.getDelta(); const dt = Math.min(rawDt, .05); const tt = clock.elapsedTime;
+  if (tween) {
+    tween.t += Math.min(rawDt, .25) / tween.dur; const k = ease(Math.min(1, tween.t));
+    camera.position.lerpVectors(tween.fp, tween.tp, k); camera.quaternion.slerpQuaternions(tween.fq, tween.tq, k);
+    if (tween.t >= 1) { const d = tween.done; tween = null; camera.rotation.setFromQuaternion(camera.quaternion, 'YXZ'); d && d(); }
+  } else if (mode === 'walk') {
+    let fx = 0, fz = 0;
+    if (keys.has('KeyW') || keys.has('ArrowUp')) fz += 1; if (keys.has('KeyS') || keys.has('ArrowDown')) fz -= 1;
+    if (keys.has('KeyD')) fx += 1; if (keys.has('KeyA')) fx -= 1;
+    if (keys.has('ArrowLeft')) walk.yaw += dt * 1.8; if (keys.has('ArrowRight')) walk.yaw -= dt * 1.8;
+    fz -= stick.y; fx += stick.x;
+    const run = keys.has('ShiftLeft') || keys.has('ShiftRight') ? 2.1 : 1; const speed = 5.2 * run;
+    const sy = Math.sin(walk.yaw), cy = Math.cos(walk.yaw);
+    mv.set((-sy * fz + cy * fx), 0, (-cy * fz - sy * fx)); if (mv.lengthSq() > 1) mv.normalize();
+    walk.vel.lerp(mv.multiplyScalar(speed), 1 - Math.exp(-dt * 10));
+    walk.pos.addScaledVector(walk.vel, dt); collide(walk.pos);
+    const bob = REDUCE ? 0 : Math.sin(tt * 9) * .025 * Math.min(1, walk.vel.length() / 4);
+    camera.position.set(walk.pos.x, 1.65 + bob, walk.pos.z); camera.rotation.set(walk.pitch, walk.yaw, 0);
+  } else if (controls.enabled) controls.update();
+
+  if (hoverReq && tt > hoverNext && !tween) { hover = pick(hoverReq.x, hoverReq.y); canvas.classList.toggle('pointing', !!hover); hoverReq = null; hoverNext = tt + .08; }
+  // aro y foco
+  const target = sel || (mode === 'walk' ? hover : null);
+  if (target) { ring.position.x = ringIn.position.x = target.x; ring.position.z = ringIn.position.z = target.z; const s = Math.max(target.L, target.W) * .62; ring.scale.setScalar(s); ringIn.scale.setScalar(s); ringMat.opacity += ((sel ? .9 : .55) - ringMat.opacity) * .15; ringIn.material.opacity += ((sel ? .1 : .05) - ringIn.material.opacity) * .15; }
+  else { ringMat.opacity *= .85; ringIn.material.opacity *= .85; }
+  spot.intensity += ((sel && mode !== 'interior' ? 22 : 0) - spot.intensity) * .08;
+
+  renderer.render(scene, camera);
+  updateTags();
+  requestAnimationFrame(frame);
+}
+bar(1);
+document.fonts && document.fonts.ready.then(() => {});
+requestAnimationFrame(() => { frame(); setTimeout(() => $('loader').classList.add('done'), 250); });
+// abrir directo un auto con #slug
+const hash = decodeURIComponent(location.hash.slice(1)); if (hash) { const c = cars.find(x => x.slug === hash); if (c) setTimeout(() => selectCar(c), 600); }
+window.__tutu = { cars, selectCar, enterInterior, backToWalk, walk, camera };
+</script>
+<script>
+// si el módulo 3D no carga (navegador viejo o sin WebGL), avisar
+setTimeout(function(){ if(!window.__tutu){ var m=document.getElementById('load-msg'); if(m){ m.className='err'; m.textContent='No pudimos abrir el galpón 3D en este navegador. Probá con Chrome o Safari actualizados, o mirá los autos en tutuautomotores.com.'; } } }, 12000);
+</script>
+</body>
+</html>
