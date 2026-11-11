@@ -145,12 +145,13 @@ button,input,select{font:inherit;color:inherit}
 @media (max-width:860px){
   .catalog{top:auto;left:0;right:0;bottom:0;width:auto;height:min(68vh,560px);border-radius:20px 20px 0 0;padding-bottom:var(--safe-b)}
   .catalog.closed{transform:translateY(calc(100% + 24px))}
-  .detail{top:auto;left:0;right:0;bottom:0;width:auto;height:min(78vh,700px);border-radius:20px 20px 0 0}
+  .detail{top:auto;left:0;right:0;bottom:0;width:auto;height:min(54vh,520px);border-radius:20px 20px 0 0}
+  .d-photo{aspect-ratio:16/9}
   .detail[hidden]{transform:translateY(calc(100% + 24px))}
   .hint{display:none}
   .joy{display:block}
   .brand small{display:none}
-  .mode{top:68px}
+  .mode{display:none!important}
 }
 @media (hover:none) and (pointer:coarse){ .joy{display:block} .hint{display:none} }
 @media (prefers-reduced-motion:reduce){ *{transition-duration:.01ms!important} }
@@ -600,12 +601,12 @@ for (let bx = X0 + 12; bx < X1; bx += 24) for (const lz of [-9, 9]) { const pl =
 bar(.35);
 
 /* ---------------- autos instanciados ---------------- */
-const byType = {};
+const byType = {}; const GEO = {};
 cars.forEach(c => { (byType[typeKey(c)] ||= []).push(c); });
 const pickables = []; const typeMeshes = {};
 const dummy = new THREE.Object3D(); const tmpC = new THREE.Color();
 for (const key in byType) {
-  const list = byType[key]; const geos = buildType(key); const t = T[key]; const meshes = {};
+  const list = byType[key]; const geos = buildType(key); GEO[key] = geos; const t = T[key]; const meshes = {};
   for (const part in geos) {
     const im = new THREE.InstancedMesh(geos[part], M[part], list.length);
     list.forEach((c, k) => { dummy.position.set(c.x, 0, c.z); dummy.rotation.set(0, c.rotY, 0); dummy.scale.set(1, 1, 1); dummy.updateMatrix(); im.setMatrixAt(k, dummy.matrix); if (part === 'body') im.setColorAt(k, paintOf(c)); });
@@ -631,6 +632,51 @@ function setInstanceVisible(c, vis) {
 }
 function tintCars(match) {
   for (const key in typeMeshes) { const im = typeMeshes[key].body; im.userData.cars.forEach((c, k) => { tmpC.copy(paintOf(c)); if (!match(c)) tmpC.lerp(new THREE.Color(0x23272e), .82); im.setColorAt(k, tmpC); }); im.instanceColor.needsUpdate = true; }
+}
+
+
+/* ---------------- estudio 360 (el auto solo, sobre un plato giratorio) ---------------- */
+const studio = new THREE.Scene();
+studio.background = new THREE.Color(0x0a0d12);
+studio.fog = new THREE.Fog(0x0a0d12, 7, 21);
+studio.environment = scene.environment; studio.environmentIntensity = 1.1;
+studio.add(new THREE.HemisphereLight(0xd3ddff, 0x0c0e12, .45));
+const sKey = new THREE.DirectionalLight(0xffffff, 1.7); sKey.position.set(6, 9, 7); studio.add(sKey);
+const sRim = new THREE.DirectionalLight(0x9db8ff, 1.3); sRim.position.set(-7, 5, -6); studio.add(sRim);
+const sTop = new THREE.SpotLight(0xffffff, 26, 26, .6, .9, 1.4); sTop.position.set(0, 10, 0); studio.add(sTop, sTop.target);
+const sFloorTex = canvasTex(1024, 1024, (g, w, h) => {
+  const gr = g.createRadialGradient(w / 2, h / 2, 10, w / 2, h / 2, w / 2);
+  gr.addColorStop(0, '#20252d'); gr.addColorStop(.25, '#12161c'); gr.addColorStop(.6, '#0a0d12'); gr.addColorStop(1, '#0a0d12'); g.fillStyle = gr; g.fillRect(0, 0, w, h);
+});
+const sFloor = new THREE.Mesh(new THREE.CircleGeometry(40, 96).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ map: sFloorTex, roughness: .3, metalness: .1, envMapIntensity: .35 }));
+studio.add(sFloor);
+const turntable = new THREE.Group(); studio.add(turntable);
+const deck = new THREE.Group(); turntable.add(deck);
+const deckTex = canvasTex(1024, 1024, (g, w, h) => {
+  g.fillStyle = '#14181f'; g.fillRect(0, 0, w, h);
+  g.strokeStyle = 'rgba(255,255,255,.05)'; g.lineWidth = 3;
+  for (let a = 0; a < 48; a++) { const t = a / 48 * Math.PI * 2; g.beginPath(); g.moveTo(w / 2 + Math.cos(t) * 120, h / 2 + Math.sin(t) * 120); g.lineTo(w / 2 + Math.cos(t) * 505, h / 2 + Math.sin(t) * 505); g.stroke(); }
+  for (const r of [180, 330, 470]) { g.beginPath(); g.arc(w / 2, h / 2, r, 0, Math.PI * 2); g.stroke(); }
+});
+const disk = new THREE.Mesh(new THREE.CylinderGeometry(1, 1.02, .08, 96), [new THREE.MeshStandardMaterial({ color: 0x1b2028, metalness: .6, roughness: .35 }), new THREE.MeshStandardMaterial({ map: deckTex, metalness: .25, roughness: .5, envMapIntensity: .5 }), new THREE.MeshStandardMaterial({ color: 0x1b2028 })]);
+disk.position.y = .04; deck.add(disk);
+const led = new THREE.Mesh(new THREE.TorusGeometry(1.02, .012, 8, 160).rotateX(Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0x2A63D4, emissive: 0x4C82EC, emissiveIntensity: 2.4 }));
+led.position.y = .07; deck.add(led);
+const glow = new THREE.Mesh(new THREE.RingGeometry(1.0, 1.1, 96).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0x2A63D4, transparent: true, opacity: .22, depthWrite: false }));
+glow.position.y = .006; deck.add(glow);
+const studioCar = new THREE.Group(); studioCar.position.y = .08; turntable.add(studioCar);
+const studioShadow = new THREE.Mesh(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: shadowTex, transparent: true, depthWrite: false }));
+studioShadow.position.y = .085; turntable.add(studioShadow);
+let paintMat = null;
+function buildStudioCar(c) {
+  studioCar.clear(); if (paintMat) paintMat.dispose();
+  paintMat = M.body.clone(); paintMat.color.copy(paintOf(c));
+  const g = GEO[c.typeKey];
+  for (const part in g) studioCar.add(new THREE.Mesh(g[part], part === 'body' ? paintMat : M[part]));
+  studioCar.visible = true;
+  const R = Math.hypot(c.L / 2, c.W / 2) + .45; deck.scale.set(R, 1, R);
+  studioShadow.scale.set(c.L * 1.15, 1, c.W * 1.4);
+  turntable.rotation.y = -.5;
 }
 
 /* ---------------- colisiones ---------------- */
@@ -709,7 +755,6 @@ function buildCabin(c) {
   hood.position.set((t.L / 2 + wsBase) / 2, belt - .03, 0); hood.rotation.z = -.06; grp.add(hood);
   // marco del parabrisas
   box(.05, .06, W, wsBase - .02, belt + .03, 0, IM.trim); box(.05, .06, W, gh[2][0], roofY - .08, 0, IM.trim);
-  grp.position.set(c.x, 0, c.z); grp.rotation.y = c.rotY;
   grp.userData.eye = new THREE.Vector3(seatX - .2, Math.min(floorY + 1.02, roofY - .2), -W * .22);
   return grp;
 }
@@ -731,51 +776,83 @@ function carFrontDir(c) { return new THREE.Vector3(Math.cos(c.rotY), 0, -Math.si
 
 function showMode(html) { const m = $('mode'); if (!html) { m.style.display = 'none'; return; } m.innerHTML = html; m.style.display = 'block'; }
 
-function selectCar(c, opts = {}) {
-  const wasInterior = mode === 'interior';
-  if (cabin) { scene.remove(cabin); cabin = null; }
-  if (sel && sel !== c) setInstanceVisible(sel, true);
-  sel = c; mode = 'detail'; controls.enabled = false;
-  setInstanceVisible(c, true);
-  const f = carFrontDir(c), side = new THREE.Vector3(-f.z, 0, f.x);
-  const dist = Math.max(c.L * 1.25, 6.2);
-  const pos = carCenter(c).add(f.clone().multiplyScalar(dist * .72)).add(side.multiplyScalar(dist * .55)); pos.y = Math.max(1.9, c.H * 1.15);
-  flyTo(pos, carCenter(c), wasInterior ? .9 : 1.3, () => {
-    controls.target.copy(carCenter(c)); controls.minDistance = Math.max(3.4, c.L * .85); controls.maxDistance = 16;
-    controls.minPolarAngle = .18 * Math.PI; controls.maxPolarAngle = .485 * Math.PI; controls.rotateSpeed = .7; controls.enableZoom = true;
-    controls.autoRotate = !REDUCE && $('v-spin').getAttribute('aria-pressed') === 'true'; controls.autoRotateSpeed = 1.1;
+let active = scene; let spinT = 0;
+const fadeEl = document.createElement('div'); fadeEl.style.cssText = 'position:fixed;inset:0;z-index:18;background:#0a0d12;opacity:0;pointer-events:none;transition:opacity .22s';
+document.body.appendChild(fadeEl);
+function transition(fn) {
+  if (REDUCE || window.__fast) { fn(); return; }
+  fadeEl.style.opacity = '1'; setTimeout(() => { fn(); requestAnimationFrame(() => { fadeEl.style.opacity = '0'; }); }, 230);
+}
+function applyOffset() {
+  const inStudio = mode === 'detail' || mode === 'interior' || (mode === 'tween' && active === studio);
+  if (!inStudio) { camera.clearViewOffset(); return; }
+  const w = innerWidth, h = innerHeight;
+  if (w > 860) { const pw = 432; camera.setViewOffset(w + pw, h, pw, 0, w, h); }
+  else { const sh = Math.min($('detail').offsetHeight || 0, h * .62); camera.setViewOffset(w, h + sh, 0, sh, w, h); }
+}
+function studioTarget(c) { return new THREE.Vector3(0, .08 + c.H * .42, 0); }
+function frameStudio(c, fromInside) {
+  const tg = studioTarget(c); const narrow = innerWidth <= 860; const vis = innerWidth / Math.max(200, innerHeight - (narrow ? ($('detail').offsetHeight || 0) : 0)); const dist = Math.max(c.L * 1.12, 5.2) * (narrow ? Math.min(3.2, Math.max(2.1, 2.2 / vis)) : 1);
+  const end = new THREE.Vector3(dist * .78, Math.max(1.5, c.H * .95), dist * .62);
+  if (!fromInside) camera.position.copy(end.clone().multiplyScalar(1.35)).setY(end.y + 1.2);
+  camera.lookAt(tg);
+  controls.enabled = false;
+  flyTo(end, tg, fromInside ? .9 : 1.15, () => {
+    controls.target.copy(tg); controls.minDistance = Math.max(3.2, c.L * .78); controls.maxDistance = Math.max(12, c.L * 2.6);
+    controls.minPolarAngle = .12 * Math.PI; controls.maxPolarAngle = .49 * Math.PI; controls.rotateSpeed = .75; controls.enableZoom = true; controls.autoRotate = false;
     controls.enabled = true; controls.update();
   });
-  spot.position.set(c.x, 8.5, c.z); spot.target.position.set(c.x, 0, c.z); spot.intensity = 0;
+}
+function selectCar(c) {
+  if (mode === 'walk') walkBack = { pos: walk.pos.clone(), yaw: walk.yaw, pitch: walk.pitch };
+  if (cabin) { cabin.removeFromParent(); cabin = null; }
+  sel = c; mode = 'detail'; tween = null; controls.enabled = false;
   fillDetail(c); $('detail').hidden = false; closeCatalog(true);
   $('v-ext').setAttribute('aria-pressed', 'true'); $('v-int').setAttribute('aria-pressed', 'false');
   showMode('<b>Vista 360°</b> · arrastrá para girar, pellizcá o rueda para acercar');
-  $('hint').classList.add('gone'); markList(c);
+  $('hint').classList.add('gone'); markList(c); hover = null; canvas.classList.remove('pointing');
+  transition(() => { buildStudioCar(c); active = studio; applyOffset(); frameStudio(c); });
 }
 function enterInterior() {
-  if (!sel || sel.body === 'boat') return;
-  const c = sel; mode = 'interior'; controls.enabled = false; controls.autoRotate = false;
-  cabin = buildCabin(c); scene.add(cabin); setInstanceVisible(c, false);
-  const eye = cabin.userData.eye.clone(); cabin.updateMatrixWorld(); cabin.localToWorld(eye);
-  const f = carFrontDir(c); const look = eye.clone().add(f.clone().multiplyScalar(2)); look.y -= .25;
-  flyTo(eye, look, 1.2, () => {
+  if (!sel || sel.body === 'boat' || mode === 'interior') return;
+  const c = sel; mode = 'interior'; controls.enabled = false;
+  cabin = buildCabin(c); turntable.add(cabin); cabin.position.y = .08; studioCar.visible = false; studioShadow.visible = false;
+  turntable.updateMatrixWorld(true);
+  const eye = cabin.userData.eye.clone(); cabin.localToWorld(eye);
+  const f = new THREE.Vector3(1, 0, 0).applyQuaternion(turntable.quaternion);
+  const look = eye.clone().add(f.clone().multiplyScalar(2)); look.y -= .25;
+  flyTo(eye, look, 1.1, () => {
     controls.target.copy(eye.clone().add(f.clone().multiplyScalar(.012)).setY(eye.y - .002));
     controls.minDistance = 0; controls.maxDistance = 1; controls.enableZoom = false; controls.rotateSpeed = -.38;
-    controls.minPolarAngle = .22 * Math.PI; controls.maxPolarAngle = .7 * Math.PI; controls.autoRotate = false;
+    controls.minPolarAngle = .22 * Math.PI; controls.maxPolarAngle = .7 * Math.PI;
     controls.enabled = true; controls.update();
   });
   $('v-ext').setAttribute('aria-pressed', 'false'); $('v-int').setAttribute('aria-pressed', 'true');
   showMode('<b>Interior</b> · arrastrá para mirar alrededor');
 }
+function exitInterior() {
+  if (!sel || mode !== 'interior') return;
+  if (cabin) { cabin.removeFromParent(); cabin = null; }
+  studioCar.visible = true; studioShadow.visible = true; mode = 'detail';
+  $('v-ext').setAttribute('aria-pressed', 'true'); $('v-int').setAttribute('aria-pressed', 'false');
+  showMode('<b>Vista 360°</b> · arrastrá para girar, pellizcá o rueda para acercar');
+  frameStudio(sel, true);
+}
+let walkBack = null;
 function backToWalk() {
   if (!sel) return; const c = sel;
-  if (cabin) { scene.remove(cabin); cabin = null; } setInstanceVisible(c, true);
-  controls.enabled = false; controls.autoRotate = false; mode = 'tween';
-  const p = new THREE.Vector3(c.x, 1.65, c.row.aisle + (c.row.aisle < 0 ? -1 : 1) * 0 + (c.row.dir > 0 ? 1.2 : -1.2) * 0);
-  p.z = c.row.aisle + (c.row.front > c.row.aisle ? -1 : 1) * 1.2;
-  const tgt = new THREE.Vector3(c.x, 1.1, c.z);
-  flyTo(p, tgt, 1.0, () => { walk.pos.copy(p); const d = tgt.clone().sub(p); walk.yaw = Math.atan2(-d.x, -d.z); walk.pitch = -.12; mode = 'walk'; });
-  sel = null; $('detail').hidden = true; showMode(''); spot.intensity = 0; markList(null);
+  controls.enabled = false; tween = null;
+  sel = null; $('detail').hidden = true; showMode(''); markList(null);
+  transition(() => {
+    if (cabin) { cabin.removeFromParent(); cabin = null; }
+    studioCar.visible = true; studioShadow.visible = true;
+    active = scene; mode = 'walk'; applyOffset();
+    // quedás parado en el pasillo, mirando el auto en su lugar
+    const p = new THREE.Vector3(c.x, 1.65, c.row.aisle + (c.row.front > c.row.aisle ? -1 : 1) * 1.2);
+    walk.pos.copy(p); walk.vel.set(0, 0, 0);
+    const d = new THREE.Vector3(c.x - p.x, 0, c.z - p.z); walk.yaw = Math.atan2(-d.x, -d.z); walk.pitch = -.14;
+    camera.position.copy(p); camera.rotation.set(walk.pitch, walk.yaw, 0);
+  });
 }
 function stepCar(dir) { if (!sel) return; const i = order.indexOf(sel); selectCar(order[(i + dir + order.length) % order.length]); }
 
@@ -804,9 +881,9 @@ function fillDetail(c) {
 }
 $('p-prev').onclick = () => showPhoto(pi - 1); $('p-next').onclick = () => showPhoto(pi + 1);
 $('d-close').onclick = backToWalk; $('d-prev').onclick = () => stepCar(-1); $('d-next').onclick = () => stepCar(1);
-$('v-ext').onclick = () => { if (mode === 'interior' && sel) selectCar(sel); };
+$('v-ext').onclick = () => { if (mode === 'interior') exitInterior(); };
 $('v-int').onclick = () => { if (mode !== 'interior') enterInterior(); };
-$('v-spin').onclick = () => { const on = $('v-spin').getAttribute('aria-pressed') !== 'true'; $('v-spin').setAttribute('aria-pressed', on); if (mode === 'detail') controls.autoRotate = on; };
+$('v-spin').onclick = () => { const on = $('v-spin').getAttribute('aria-pressed') !== 'true'; $('v-spin').setAttribute('aria-pressed', on); };
 if (REDUCE) $('v-spin').setAttribute('aria-pressed', 'false');
 
 /* ---------------- catálogo ---------------- */
@@ -841,7 +918,7 @@ $('chips').addEventListener('click', e => {
 $('q').addEventListener('input', e => { q = norm(e.target.value.trim()); renderList(); });
 $('sort').addEventListener('change', e => { sortBy = e.target.value; renderList(); });
 function closeCatalog(force) { $('catalog').classList.add('closed'); $('btn-cat').setAttribute('aria-expanded', 'false'); }
-$('btn-cat').onclick = () => { const c = $('catalog'); const open = c.classList.contains('closed'); c.classList.toggle('closed', !open); $('btn-cat').setAttribute('aria-expanded', open); if (open && innerWidth <= 860 && sel) backToWalk(); };
+$('btn-cat').onclick = () => { const c = $('catalog'); const open = c.classList.contains('closed'); c.classList.toggle('closed', !open); $('btn-cat').setAttribute('aria-expanded', open); if (open && sel) backToWalk(); };
 if (innerWidth <= 860) closeCatalog();
 renderList();
 
@@ -873,7 +950,7 @@ function updateTags() {
 const keys = new Set();
 addEventListener('keydown', e => {
   if (e.target.closest('input,select,textarea')) return;
-  if (e.key === 'Escape') { if (mode === 'interior') selectCar(sel); else if (mode === 'detail') backToWalk(); return; }
+  if (e.key === 'Escape') { if (mode === 'interior') exitInterior(); else if (mode === 'detail') backToWalk(); return; }
   keys.add(e.code); if (mode === 'walk' && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) e.preventDefault();
   if (mode === 'walk' && /Key[WASD]|Arrow/.test(e.code)) $('hint').classList.add('gone');
 });
@@ -892,13 +969,13 @@ canvas.addEventListener('pointermove', e => {
   if (drag && drag.id === e.pointerId) {
     const dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag.x = e.clientX; drag.y = e.clientY; drag.moved += Math.abs(dx) + Math.abs(dy);
     if (mode === 'walk') { const k = e.pointerType === 'touch' ? .0055 : .0034; walk.yaw -= dx * k; walk.pitch = Math.max(-1.1, Math.min(.9, walk.pitch - dy * k)); }
-  } else if (e.pointerType === 'mouse' && mode !== 'interior') {
+  } else if (e.pointerType === 'mouse' && mode === 'walk') {
     hoverReq = { x: e.clientX, y: e.clientY };
   }
 });
 canvas.addEventListener('pointerup', e => {
   canvas.classList.remove('grabbing');
-  if (drag && drag.moved < 8 && mode !== 'interior' && mode !== 'tween') { const c = pick(e.clientX, e.clientY); if (c && c !== sel) selectCar(c); }
+  if (drag && drag.moved < 8 && mode === 'walk' && !tween) { const c = pick(e.clientX, e.clientY); if (c) selectCar(c); }
   drag = null;
 });
 canvas.addEventListener('pointercancel', () => { drag = null; canvas.classList.remove('grabbing'); });
@@ -911,7 +988,7 @@ const endStick = () => { stick.id = null; stick.x = stick.y = 0; knob.style.tran
 joy.addEventListener('pointerup', endStick); joy.addEventListener('pointercancel', endStick);
 function moveStick(e) { const r = joy.getBoundingClientRect(); let dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2); const m = Math.hypot(dx, dy), max = r.width / 2 - 14; if (m > max) { dx *= max / m; dy *= max / m; } stick.x = dx / max; stick.y = dy / max; knob.style.transform = `translate(${dx}px,${dy}px)`; }
 
-addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
+addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); applyOffset(); });
 
 /* ---------------- bucle ---------------- */
 const clock = new THREE.Clock(); const mv = new THREE.Vector3();
@@ -936,15 +1013,16 @@ function frame() {
     const bob = REDUCE ? 0 : Math.sin(tt * 9) * .025 * Math.min(1, walk.vel.length() / 4);
     camera.position.set(walk.pos.x, 1.65 + bob, walk.pos.z); camera.rotation.set(walk.pitch, walk.yaw, 0);
   } else if (controls.enabled) controls.update();
+  if (active === studio && mode === 'detail' && !REDUCE && $('v-spin').getAttribute('aria-pressed') === 'true' && !(drag && drag.moved > 4)) turntable.rotation.y += dt * .22;
+  if (active === studio) { led.material.emissiveIntensity = 2.1 + Math.sin(tt * 1.6) * .35; }
 
   if (hoverReq && tt > hoverNext && !tween) { hover = pick(hoverReq.x, hoverReq.y); canvas.classList.toggle('pointing', !!hover); hoverReq = null; hoverNext = tt + .08; }
   // aro y foco
-  const target = sel || (mode === 'walk' ? hover : null);
+  const target = mode === 'walk' ? hover : null;
   if (target) { ring.position.x = ringIn.position.x = target.x; ring.position.z = ringIn.position.z = target.z; const s = Math.max(target.L, target.W) * .62; ring.scale.setScalar(s); ringIn.scale.setScalar(s); ringMat.opacity += ((sel ? .9 : .55) - ringMat.opacity) * .15; ringIn.material.opacity += ((sel ? .1 : .05) - ringIn.material.opacity) * .15; }
   else { ringMat.opacity *= .85; ringIn.material.opacity *= .85; }
-  spot.intensity += ((sel && mode !== 'interior' ? 22 : 0) - spot.intensity) * .08;
-
-  renderer.render(scene, camera);
+  
+  renderer.render(active, camera);
   updateTags();
   requestAnimationFrame(frame);
 }
@@ -953,7 +1031,7 @@ document.fonts && document.fonts.ready.then(() => {});
 requestAnimationFrame(() => { frame(); setTimeout(() => $('loader').classList.add('done'), 250); });
 // abrir directo un auto con #slug
 const hash = decodeURIComponent(location.hash.slice(1)); if (hash) { const c = cars.find(x => x.slug === hash); if (c) setTimeout(() => selectCar(c), 600); }
-window.__tutu = { cars, selectCar, enterInterior, backToWalk, walk, camera };
+window.__tutu = { cars, selectCar, enterInterior, exitInterior, backToWalk, walk, camera };
 </script>
 <script>
 // si el módulo 3D no carga (navegador viejo o sin WebGL), avisar
