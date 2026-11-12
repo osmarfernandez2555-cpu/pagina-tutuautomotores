@@ -174,7 +174,7 @@ button,input,select{font:inherit;color:inherit}
     <small>Galpón 3D</small>
   </a>
   <div class="spacer"></div>
-  <div class="seg" role="group" aria-label="Cómo ver los autos en el galpón"><button id="k-fotos" aria-pressed="true">Fotos reales</button><button id="k-3d" aria-pressed="false">Modelos 3D</button></div>
+  <div class="seg" role="group" aria-label="Cómo ver los autos en el galpón"><button id="k-3d" aria-pressed="true">Autos 3D</button><button id="k-fotos" aria-pressed="false">Fotos</button></div>
   <button class="btn" id="btn-cat" aria-expanded="true" aria-controls="catalog">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
     <span>Catálogo</span>
@@ -269,6 +269,8 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 
 const $ = id => document.getElementById(id);
 const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -694,12 +696,43 @@ function streamPhotos() {
   }
 }
 function tintBoards(match) { cars.forEach(c => { c.board.pm.color.setHex(match(c) ? 0xffffff : 0x3a3f47); }); }
-let viewKind = 'fotos';
+
+/* ---------------- autos 3D reales (modelos .glb generados de las fotos de cada unidad) ---------------- */
+// slug de la publicación → archivo .glb dentro de la carpeta models/ (rot: giro opcional si el modelo viene mirando a otro lado)
+const MODELS = {"gwm-haval-h6-gt-2-0-4wd-7dct-2025": {"file": "models/gwm-haval-h6-gt-2025.glb", "rot": 3.1416}, "fiat-cronos-drive-1-3n-mt-2025": {"file": "models/fiat-cronos-drive-2025.glb", "rot": 3.1416}, "jeep-compass-sport-2-4n-4x2-2021": {"file": "models/jeep-compass-sport-2021.glb", "rot": 1.5708}};
+const gltf = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
+const realCache = {}; const realGrp = new THREE.Group(); scene.add(realGrp); const realPick = [];
+function normalizeModel(obj, c, m) {
+  const root = new THREE.Group(); const inner = new THREE.Group(); inner.add(obj); root.add(inner);
+  const size = new THREE.Vector3(); const box = new THREE.Box3();
+  box.setFromObject(obj); box.getSize(size);
+  inner.rotation.y = m.rot !== undefined ? m.rot : (size.z > size.x ? Math.PI / 2 : 0);
+  root.updateMatrixWorld(true); box.setFromObject(inner); box.getSize(size);
+  inner.scale.setScalar((m.length || T[c.typeKey].L) / Math.max(size.x, .001));
+  root.updateMatrixWorld(true); box.setFromObject(inner);
+  const ctr = box.getCenter(new THREE.Vector3());
+  inner.position.set(-ctr.x, -box.min.y, -ctr.z);
+  obj.traverse(o => { if (o.isMesh) { const ms = Array.isArray(o.material) ? o.material : [o.material]; ms.forEach(mt => { if (mt && 'envMapIntensity' in mt) mt.envMapIntensity = 1.1; }); } });
+  root.updateMatrixWorld(true); box.setFromObject(root); c.realH = box.max.y;
+  return root;
+}
+function loadReal(c) {
+  const m = MODELS[c.slug]; if (!m) return Promise.resolve(null);
+  return realCache[c.slug] ||= gltf.loadAsync(m.file).then(g => normalizeModel(g.scene, c, m)).catch(err => { console.warn('No se pudo cargar el 3D de', c.name, err); return null; });
+}
+cars.filter(c => MODELS[c.slug]).forEach(c => loadReal(c).then(root => {
+  if (!root) return; const inst = root.clone(); inst.position.set(c.x, 0, c.z); inst.rotation.y = c.rotY;
+  inst.traverse(o => { if (o.isMesh) { o.userData.car = c; realPick.push(o); } });
+  realGrp.add(inst); c.real = inst; c.hasReal = true; setInstanceVisible(c, false);
+  if (c.realH) c.H = Math.max(c.H, c.realH);
+}));
+
+let viewKind = '3d';
 function setViewKind(k) {
   viewKind = k; const fotos = k === 'fotos';
   boardsGrp.visible = fotos;
   for (const key in typeMeshes) for (const p in typeMeshes[key]) typeMeshes[key][p].visible = !fotos;
-  sh.visible = !fotos;
+  sh.visible = !fotos; realGrp.visible = !fotos;
   $('k-fotos').setAttribute('aria-pressed', fotos); $('k-3d').setAttribute('aria-pressed', !fotos);
   hover = null;
 }
@@ -750,7 +783,10 @@ function buildStudioCar(c) {
   studioCar.clear(); if (paintMat) paintMat.dispose();
   paintMat = M.body.clone(); paintMat.color.copy(paintOf(c));
   const g = GEO[c.typeKey];
-  for (const part in g) studioCar.add(new THREE.Mesh(g[part], part === 'body' ? paintMat : M[part]));
+  const generic = () => { for (const part in g) studioCar.add(new THREE.Mesh(g[part], part === 'body' ? paintMat : M[part])); };
+  if (MODELS[c.slug]) {
+    loadReal(c).then(root => { if (sel !== c) return; studioCar.clear(); if (root) studioCar.add(root.clone()); else generic(); });
+  } else generic();
   studioCar.visible = true;
   const R = Math.hypot(c.L / 2, c.W / 2) + .45; deck.scale.set(R, 1, R);
   studioShadow.scale.set(c.L * 1.15, 1, c.W * 1.4);
@@ -1001,7 +1037,7 @@ $('sort').addEventListener('change', e => { sortBy = e.target.value; renderList(
 function closeCatalog(force) { $('catalog').classList.add('closed'); $('btn-cat').setAttribute('aria-expanded', 'false'); }
 $('btn-cat').onclick = () => { const c = $('catalog'); const open = c.classList.contains('closed'); c.classList.toggle('closed', !open); $('btn-cat').setAttribute('aria-expanded', open); if (open && sel) backToWalk(); };
 if (innerWidth <= 860) closeCatalog();
-setViewKind('fotos');
+setViewKind('3d');
 renderList();
 
 /* ---------------- etiquetas flotantes ---------------- */
@@ -1050,8 +1086,8 @@ canvas.addEventListener('pointerup', dropTouch); canvas.addEventListener('pointe
 function pick(cx, cy) {
   ndc.set(cx / innerWidth * 2 - 1, -(cy / innerHeight) * 2 + 1); ray.setFromCamera(ndc, camera);
   if (viewKind === 'fotos') { const hit = ray.intersectObjects(boardPick, false)[0]; return hit && hit.distance < 45 ? hit.object.userData.car : null; }
-  const hit = ray.intersectObjects(pickables, false)[0]; if (!hit || hit.distance > 40) return null;
-  return hit.object.userData.cars[hit.instanceId] || null;
+  const hit = ray.intersectObjects([...pickables, ...realPick], false)[0]; if (!hit || hit.distance > 40) return null;
+  return hit.object.userData.car || hit.object.userData.cars[hit.instanceId] || null;
 }
 let drag = null; let hoverReq = null, hoverNext = 0;
 canvas.addEventListener('pointerdown', e => { drag = { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, moved: 0, id: e.pointerId }; if (mode === 'walk') { canvas.setPointerCapture(e.pointerId); canvas.classList.add('grabbing'); } });
